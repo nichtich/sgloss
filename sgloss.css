@@ -1,0 +1,127 @@
+body {
+  margin: 0px; padding: 0px;
+}
+
+#header {
+  background: #DDD;
+  padding: 0.5em 1em;
+}
+#header a.title {
+  font-weight: bold;
+}
+a, a:visited {
+  color: #00A;
+  text-decoration:none;
+}
+a:hover {
+  text-decoration:underline;
+}
+#footer {
+  border-top: 5px solid #ddd;
+  padding: 5px;
+  font-size: small;
+}
+#body {
+  background: #FFF;
+  padding: 0.5em 1em;
+}
+
+.message, .error { padding: 0.5em; }
+.message { color: #090;  background-color: #afa; }
+.error { color: #900; background-color: #faa; }
+
+/*div.msg_info { border: 1px #028 solid; background-color: #8cf; }
+div.msg_warning { border: 1px #830 solid; background-color: #fc8; }*/
+
+.missing {
+}
+
+h1 { font-size: 150%; margin-bottom: 0; }
+
+.sg-link.missing, .sg-link.missing:active, .sg-link.missing:visited {
+    color: #E00;
+    border: 0px;
+}
+
+.sg-articles {
+/*  text-align: justify;
+  -moz-column-width: 20em;
+  -moz-column-gap: 2em;
+  -webkit-column-width: 20em;
+  -webkit-column-gap: 2em;*/
+}
+
+/* .quot:before { content: " &#x201E;&#x201C;"; } */
+
+.sg-about { margin-top:0; font-style: italic; }
+
+.sg-article {
+  clear:both;
+  padding-bottom:1.5em;
+}
+
+.sg-article h2 {
+  font-size: 100%; 
+  display: inline;
+}
+.sg-article .sg-text { display:inline; }
+.sg-text:before { content: " "; }
+
+.sg-alias:before { content: " ("; }
+.sg-alias:after  { content: ") "; }
+
+.sg-see {
+    font-size:small;
+    padding-top:0.3em;
+}
+.sg-reference {
+    font-size: small;
+}
+.sg-author {
+    font-size: small;
+    float:right;
+    font-style:italic;
+}
+
+/* internal and external links */
+.sg-link:before { content: "\2197\A0"; }
+.sg-link, .sg-link:active, .sg-link:visited {
+    border-bottom: 1px #000 dotted;
+    text-decoration: none; 
+    color: #000;
+}
+.sg-link:hover {
+    border-bottom: 2px #000 solid;
+}
+
+.sg-extlink, .sg-extlink:active, .sg-extlink:visited {
+  text-decoration: none; 
+  color: #000;
+  border-bottom: none;
+}
+.sg-extlink:hover { 
+  text-decoration: underline; 
+  border-bottom: none;
+}
+
+/* xmlverbatim */
+.xmlverb-default          { color: #333; font-family: monospace;
+ font-size: medium; background-color: #fff; border: 1px solid #666 }
+.xmlverb-element-name     { color: #900 }
+.xmlverb-element-nsprefix { color: #660 }
+.xmlverb-attr-name        { color: #600 }
+.xmlverb-attr-content     { color: #009; font-weight: bold }
+.xmlverb-ns-name          { color: #660 }
+.xmlverb-ns-uri           { color: #309 }
+.xmlverb-text             { color: #000; font-weight: bold }
+.xmlverb-comment          { color: #060; font-style: italic }
+.xmlverb-pi-name          { color: #060; font-style: italic }
+.xmlverb-pi-content       { color: #066; font-style: italic }
+
+
+/* custom style */
+.sg-link, .sg-link:active, .sg-link:visited {
+    color: #00A;
+    border: 0px;
+}
+

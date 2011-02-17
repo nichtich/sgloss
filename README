@@ -1,0 +1,10 @@
+sgloss is the little sister of authority file and encyclopedia
+
+This project consists of:
+
+ - an XML based format for simple glossaries
+
+ - a couple of scripts to convert from and to sgloss format
+
+ - a wiki software to edit glossaries online
+
