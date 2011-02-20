@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="themes/print/view.xsl"?>
+<sgloss xmlns="http://jakobvoss.de/sgloss/">
+  <title>SGloss - Simple glossary format</title>
+  <article>
+    <title>SGloss</title>
+    <alias>Simple Glossaries</alias>
+    <text>defines an <link to="XML"/>-based format to encode simple
+    glossaries, several <link to="XSLT"/>-<link to="Themes"/> to display
+    glossaries in different formats, and a <link to="Wiki"/> to edit these 
+    glossaries online.
+    </text>
+  <reference><link href="https://github.com/nichtich/sgloss"/></reference>
+  <author>J. Voß</author>
+</article>
+<article>
+  <title>Themes</title>
+  <text>
+   Themes consist of at least one <link to="XSLT"/> script to display 
+   <link to="SGloss"/> glossaries. Each theme can support additional
+   <link to="action">actions</link>  but viewing, for instance for editing articles.
+  </text>
+</article>
+<article>
+  <title>action</title>
+  <text>An action is something you can do with a glossary, for instance viewing,
+  creating an article etc.</text>
+</article>
+<article>
+  <title>XML</title>
+  <alias>Extensible Markup Language</alias>
+  <text>
+    Tree based data structuring language. Can be transformed to other
+    formats with <link to="XSLT"/>
+  </text>
+</article>
+</sgloss>

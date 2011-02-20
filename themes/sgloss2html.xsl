@@ -206,8 +206,8 @@ h1 { font-size: 150%; margin-bottom: 0; }
           <xsl:attribute name="href">
              <xsl:choose>
                <xsl:when test="@action"><xsl:value-of select="@action"/></xsl:when>
-               <xsl:when test="not(@action)"><xsl:value-of select="@to"/></xsl:when>
-               <xsl:otherwise><xsl:value-of select="@to"/></xsl:otherwise>
+               <!--xsl:when test="not(@action)"><xsl:value-of select="@to"/></xsl:when-->
+               <xsl:otherwise>#<xsl:value-of select="@to"/></xsl:otherwise>
              </xsl:choose>
           </xsl:attribute>
           <xsl:value-of select="$text"/>
