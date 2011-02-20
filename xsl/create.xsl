@@ -14,29 +14,18 @@ GNU Affero General Public License (the [AGPLv3] License).
   <xsl:import href="wikisyntax.xsl"/>
   <xsl:import href="layout.xsl"/>
 
-  <xsl:param name="cssurl">sgloss.css</xsl:param>
-  <xsl:param name="jsurl"></xsl:param>
-
   <xsl:param name="article" select="/sg:sgloss/sg:article[1]"/>
 
-    <xsl:param name="title">
-      <xsl:choose>
-        <xsl:when test="$article/@missing">
-          <xsl:text>Create </xsl:text>
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:text>Edit </xsl:text>
-        </xsl:otherwise>
-      </xsl:choose>
-      <xsl:text>article: </xsl:text>
-      <xsl:value-of select="$article/sg:title"/>
-    </xsl:param>
-
+  <xsl:param name="title">Create new article</xsl:param>
+  
   <xsl:template match="sg:article">
-    <!--h2><xsl:value-of select="sg:title"/></h2-->
     <form method="post">
-      <input type="hidden" name="title" value="{sg:title}"/>
-      <input type="hidden" name="action" value="edit"/>
+      <div>
+        <label for="title">Title:</label>&#xA0;
+        <input type="text" name="title" id="title" value="{sg:title}"/>
+      </div>
+
+      <input type="hidden" name="action" value="create"/>
 
       <textarea name="data" cols="80" rows="16">
         <xsl:apply-templates select="." mode="wikisyntax"/>
@@ -46,11 +35,7 @@ GNU Affero General Public License (the [AGPLv3] License).
       &#xA0;
       &#xA0;
       &#xA0;
-      <input type="submit" name="edit" value="reset"/>
       <input type="submit" name="edit" value="cancel"/>
-      &#xA0;
-      &#xA0;
-      <input type="submit" name="edit" value="delete"/>
     </form> 
   </xsl:template>
 

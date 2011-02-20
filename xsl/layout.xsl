@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Copyright (c) 2010 Jakob Voss. All Rights Reserved.
+Copyright (c) 2011 Jakob Voss. All Rights Reserved.
 
 The contents of this file may be used under the terms of the 
 GNU Affero General Public License (the [AGPLv3] License).
@@ -11,9 +11,34 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
+  <xsl:output method="html" encoding="UTF-8" indent="yes"/>
+
+  <xsl:param name="cssurl">sgloss.css</xsl:param>
+  <xsl:param name="jsurl"></xsl:param>
+
   <xsl:variable name="VERSION">0.0.1</xsl:variable>
 
-  <!-- general layout templates -->
+  <xsl:template match="/sg:sgloss">
+    <html>
+      <xsl:call-template name="htmlhead"/>
+      <body>
+        <xsl:apply-templates select="." mode="header"/>
+        <xsl:apply-templates select="sg:message|sg:error"/>
+        <div id="body">
+           <xsl:if test="$title">
+             <h1><xsl:value-of select="$title"/></h1>
+           </xsl:if>
+           <div class="sg-articles">
+            <xsl:apply-templates select="sg:article">
+              <xsl:sort select="sg:title"/>
+              <xsl:with-param name="editable" select="true()"/>
+            </xsl:apply-templates>
+          </div>
+        </div>
+        <xsl:apply-templates select="." mode="footer"/>
+      </body>
+    </html>
+  </xsl:template>
 
   <xsl:template name="htmlhead">
     <head>
@@ -35,10 +60,17 @@ GNU Affero General Public License (the [AGPLv3] License).
       <a class="title" href="?"><xsl:value-of select="sg:title"/></a>
       &#xA0;
       <a href="?action=list">a-z</a>
+      &#xA0;
+      <a href="?action=create">create</a>
+      &#xA0;
+      <a href="?action=links">links</a>
     </div>
   </xsl:template>
 
   <xsl:template match="sg:sgloss" mode="footer">
+    <xsl:if test="//sg:debug">
+      <div class="debug"><pre><xsl:value-of select="//sg:debug"/></pre></div>
+    </xsl:if>
     <div id="footer">
       powered by <a href="https://github.com/nichtich/sgloss">SGloss</a>
       &#xA0;<xsl:value-of select="$VERSION"/>&#xA0;

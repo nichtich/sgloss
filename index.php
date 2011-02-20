@@ -4,11 +4,13 @@
  * SGloss - Simple Glossary Wiki
  */ 
 
-$title  = @$_REQUEST['title'];
-$format = @$_REQUEST['format'];
-$action = @$_REQUEST['action'];
-$edit   = @$_REQUEST['edit'];
-$data   = @$_REQUEST['data'];
+$title  = trim(@$_REQUEST['title']);
+$title = preg_replace('/[\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
+
+$format = trim(@$_REQUEST['format']);
+$action = trim(@$_REQUEST['action']);
+$edit   = trim(@$_REQUEST['edit']);
+$data   = trim(@$_REQUEST['data']);
 
 # Get current base URL
 $base = empty($_SERVER['SERVER_NAME']) ? 'localhost' : $_SERVER['SERVER_NAME'];
@@ -21,10 +23,21 @@ $wiki = new SGlossWiki( array(
     "base" => $base 
 ) );
 
+$wiki->debug = array(
+    "request" => $_REQUEST
+);
+
 if ( $action == "list" ) {
     $wiki->listArticles();
+} else if ( $action == "links" ) {
+    $wiki->listLinks();
+} else if ( $action == "create" ) {
+    $wiki->createArticle( $title, $data, $edit );
 } else if ( $action == "edit" ) {
-    $wiki->editArticle( $title, $data, $edit );
+    if ( $title == "" ) 
+        $wiki->createArticle( $title, $data, $edit );
+    else
+        $wiki->editArticle( $title, $data, $edit );
 } else if ( $action == "import" ) {
     # TODO
 } else {
@@ -63,24 +76,65 @@ class SGlossWiki {
             $this->err = "Failed to connect to database: " . $e->getMessage();
         }
     }
+ 
+    function listMissingArticles() {
+        # TODO
+    }
+
+    function createArticle( $title, $data, $edit ) {
+        if ( $edit == "cancel" ) {
+            header("Location: " . $this->base);
+            exit;
+        }
+        if ( $title != "" ) {
+            $article = $this->_loadArticle( $title );
+            if ( $article->exists() )
+                $this->err = "Article “${title}” already exists";
+        } 
+        $article = new SGlossArticle( $title );
+        $article->setData( $data ); 
+        if ( $edit == "save" && $title != "" && !$this->err ) {
+            $this->_saveArticle( $article );
+            if (!$this->err) {
+                $this->msg = "Created article “${title}”";
+                $this->_viewArticle( $article, "html" );
+                exit;
+            }
+        }
+        $this->_createArticle( $article );
+     }
 
     function editArticle( $title, $data, $edit ) {
         if ( $edit == "cancel" ) {
             header("Location: " . $this->base . "?title=" . urlencode($title));
             exit;
         }
-        if ( $data === NULL or $edit == "reset" ) {
+        if ( $data === "" or $edit == "reset" ) {
             $article = $this->_loadArticle( $title );
-        } else {
-            $article = new SGlossArticle( $title );
-            $article->setData( $data ); 
-            if ( $edit == "save" ) {
-                $this->_saveArticle( $article );
-                if (!$this->err) {
-                    $this->msg = "Saved article";
-                    $this->_viewArticle( $article, "html" );
-                    exit;
-                }
+            $this->_editArticle( $article );
+            exit;
+        } 
+
+        if ( $edit == "delete" ) {
+            $this->_deleteArticle( $title );
+            if (!$this->err) {
+                $this->msg = "Deleted article “${title}”";
+                $this->listArticles();
+                exit;
+            }
+        }
+
+        $article = new SGlossArticle( $title );
+        $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
+        $article->exists = ( $sth->execute(array($title)) && $sth->fetch() ) ? TRUE : FALSE;
+        $article->setData( $data, TRUE ); 
+
+        if ( $edit == "save" ) {
+            $this->_saveArticle( $article );
+            if (!$this->err) {
+                $this->msg = "Saved article “${title}”";
+                $this->_viewArticle( $article, "html" );
+                exit;
             }
         }
         $this->_editArticle( $article );
@@ -101,6 +155,66 @@ class SGlossWiki {
         }
     }
 
+    function listLinks() {
+
+        $articles = array();
+        $links    = array();
+
+        if (!$this->err) try {
+            $sth = $this->dbh->prepare('SELECT title,xml FROM articles');
+            if ( $sth->execute() ) {
+                while ( $row = $sth->fetch(PDO::FETCH_ASSOC) ) {
+                   $a = new SGlossArticle( $row['title'] );
+                   $a->xml = $row['xml'];
+                   $a->exists = TRUE;
+
+                   $adom = $a->getDOM();
+                   $alinks = $a->getLinks();
+                   foreach ($alinks as $to) {
+                      if (!array_key_exists($to,$links))
+                         $links[$to] = array();
+                      $links[$to][ $a->title ] = 1;
+                   }
+
+                   $articles[ $a->title ] = $a;
+                }
+            }
+        } catch ( Exception $e ) {
+            $this->err = "Failed to load articles: " . $e->getMessage();
+        }
+
+        foreach ( $links as $to => $back ) {
+            if (!array_key_exists($to,$articles)) {
+                $a = new SGlossArticle( $to );
+                $a->exists = FALSE;
+                $articles[ $to ] = $a;
+            } else {
+                $a = $articles[ $to ];
+            }
+            $adom = $a->getDOM(); // MISSING?
+            foreach ( array_keys( $back ) as $to ) {
+                $elem = $adom->createElement('backlink');
+                $attr = $adom->createAttribute('to');
+                $attr->appendChild( $adom->createTextNode( $to ) );
+                $elem->appendChild( $attr );
+                $adom->documentElement->appendChild( $elem );
+            }
+            $a->dom = $adom;
+        }
+
+        $dom = $this->_createDOM( "links" );
+
+        foreach ( $articles as $a ) {
+            $adom = $a->getDOM();
+            $a2 = $dom->importNode( $adom->documentElement, TRUE );
+            $dom->documentElement->appendChild( $a2  );
+        }
+
+        $this->debug = $links;
+
+        $this->_sendDOM($dom);
+    }
+
     function listArticles() {
         $articles = array();
         if (!$this->err) try {
@@ -109,12 +223,11 @@ class SGlossWiki {
                 $articles = $sth->fetchAll( PDO::FETCH_CLASS, 'SGlossArticle' );
             }
         } catch ( Exception $e ) {
-            $this->err = "Failed to save article: " . $e->getMessage();
+            $this->err = "Failed to load articles: " . $e->getMessage();
         }
 
         $dom = $this->_createDOM( "list" );
         foreach ( $articles as $a ) {
-
             $adom = $a->getDOM();
             $a2 = $dom->importNode( $adom->documentElement, TRUE );
             $dom->documentElement->appendChild( $a2  );
@@ -133,8 +246,8 @@ class SGlossWiki {
         $articles = array();
         // TODO: fill with articles from DOM
 
-        $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
 
+        $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
         $alinks = $xpath->evaluate('g:article/g:text/g:link[@to]');
         if (!is_null($alinks)) {
             foreach ($alinks as $link) {
@@ -160,20 +273,25 @@ class SGlossWiki {
         print $dom->saveXML();
     }
 
-    function _viewArticle( $article, $format ) {
-        $dom = $this->_createDOM( "view" );
+    function _sendArticle( $article, $action ) {
         $adom = $article->getDOM();
+$this->debug['a'] = $article;
+        $dom = $this->_createDOM( $action );
         $a2 = $dom->importNode( $adom->documentElement, TRUE );
         $dom->documentElement->appendChild( $a2  );
         $this->_sendDOM($dom);
     }
 
+    function _viewArticle( $article, $format ) {
+        $this->_sendArticle( $article, "view" );
+    }
+
     function _editArticle( $article ) {
-        $dom = $this->_createDOM( "edit" );
-        $adom = $article->getDOM();
-        $a2 = $dom->importNode( $adom->documentElement, TRUE );
-        $dom->documentElement->appendChild( $a2  );
-        $this->_sendDOM($dom);
+        $this->_sendArticle( $article, "edit" );
+    }
+
+    function _createArticle( $article ) {
+        $this->_sendArticle( $article, "create" );
     }
 
     function _createDOM( $action = "view" ) {
@@ -196,20 +314,38 @@ class SGlossWiki {
             $msg->appendChild( $dom->createTextNode( $this->msg ) ); 
             $root->appendChild( $msg );
         }
+        if ($this->debug) {
+            $node = $dom->createElementNS( SGlossWiki::$NS, 'debug' );
+            $node->appendChild( $dom->createTextNode( print_r($this->debug,1) ) ); 
+            $root->appendChild( $node );
+        }
+
         return $dom;
     }
 
     function _saveArticle( $article ) {
         if ( $this->err ) return;
         try {
-#        if ( $article->exists() ) {
-#        } else {
-            $article->xml = $article->dom->saveXML();
+            # TODO: remove meta elements (backlink etc.)
+            $xml = $article->dom->saveXML();
+            $xml = preg_replace('/^<\?[^>]+?>\s*<article[^>]+>/m','', $xml);
+            $xml = preg_replace('/<\/article>$/m','',$xml);
+            $article->xml = $xml;
             $sth = $this->dbh->prepare('INSERT INTO articles VALUES (?,?)');
-            $sth->execute(array( $article->title, $article->xml ));
+            $sth->execute(array( $article->title, $article->xmlContent() ));
             $article->exists = TRUE;
         } catch ( Exception $e ) {
             $this->err = "Failed to save article: " . $e->getMessage();
+        }
+    }
+
+    function _deleteArticle( $title ) {
+        if ( $this->err ) return;
+        try {
+            $sth = $this->dbh->prepare('DELETE FROM articles WHERE title = ?');
+            $sth->execute(array( $title ));
+        } catch ( Exception $e ) {
+            $this->err = "Failed to delete article: " . $e->getMessage();
         }
     }
 
@@ -218,11 +354,12 @@ class SGlossWiki {
         if (!$this->err) {
             $sth = $this->dbh->prepare('SELECT * FROM articles WHERE title=?');
             if ( $sth->execute(array( $title )) ) {
-                $result = $sth->fetchAll( PDO::FETCH_CLASS, 'SGlossArticle' );
+                $result = $sth->fetchAll();
             } 
             if ( count($result) ) {
-               $article = $result[0];
+               $article = new SGlossArticle( $result[0]['title'] );
                $article->exists = TRUE;
+               $article->xml = $result[0]['xml'];
             } else {
                $article->title = $title;
             }
@@ -256,11 +393,19 @@ class SGlossArticle {
          return $this->exists;
     }
 
+    public function xmlContent() {
+        return $this->xml;
+    }
+
+    // TODO: return documentfragment as content
     public function getDOM() {
         if (!$this->dom) {
             $this->dom = new DomDocument('1.0','UTF-8');
             if ( $this->xml ) {
-                $this->dom->loadXML( $this->xml );
+                $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><article xmlns=\"http://jakobvoss.de/sgloss/\">"
+                     . $this->xml . "</article>";
+                $this->dom->loadXML( $xml );
+        
             } else { // create new article
                 $dom = $this->dom;  
                 $root = $dom->createElementNS( SGlossWiki::$NS, 'article' );
@@ -270,13 +415,35 @@ class SGlossArticle {
                     $root->appendChild( $title );
                 } 
                 $dom->appendChild( $root );
-                return $this->dom;
+            }
+            if (!$this->exists) {
+                $attr = $this->dom->createAttribute('missing');
+                $attr->appendChild( $this->dom->createTextNode('1') );
+                $this->dom->documentElement->appendChild( $attr );
             }
         }
         return $this->dom;
     }
 
-    function setData( $data ) {
+    function getLinks() {
+        $xpath = new DOMXPath( $this->getDOM() );
+        $xpath->registerNamespace('g',SGlossWiki::$NS);
+
+        $links = array();
+
+        $alinks = $xpath->evaluate('g:text/g:link[@to]');
+        if (!is_null($alinks)) {
+            foreach ($alinks as $link) {
+                $to = $link->getAttribute('to');
+                $links[$to] = 1;
+            }
+        }
+
+        return array_keys($links);
+    }
+
+    function setData( $data, $exists = NULL ) {
+        if ( $exists !== NULL ) $this->exists = $exists;
 
         $dom = $this->getDOM();
         $root = $dom->documentElement;
@@ -299,9 +466,9 @@ class SGlossArticle {
                # TODO: metadata
            }
 
-           if ( preg_match('/^\[\[([^]]+)\]\]/',$text) ) $text = " $text";
+           if ( preg_match('/^\[\[([^]]*)\]\]/',$text) ) $text = " $text";
            
-           while ( $text != "" and preg_match('/^(.*?)\[\[([^]]+)\]\](.*)$/', $text, $match) ) {
+           while ( $text != "" and preg_match('/^(.*?)\[\[([^]]*)\]\](.*)$/', $text, $match) ) {
               if ( $match[1] != "" ) {
                   $textElem->appendChild( $dom->createTextNode( $match[1] ) );
               }
@@ -310,6 +477,8 @@ class SGlossArticle {
               $link = explode("|",$match[2]);
               $to = $link[0];
               $linktext = (count($link) > 1 && $link[1] != "") ? $link[1] : $link[0];
+
+              # TODO: normalize title
 
               if ( $to != "" ) {
                   $linkElem = $dom->createElementNS( SGlossWiki::$NS, 'link' );
