@@ -11,7 +11,7 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
-  <xsl:import href="layout.xsl"/>
+  <xsl:import href="_core.xsl"/>
 
   <xsl:param name="title">Links</xsl:param>
   <xsl:param name="action">links</xsl:param>

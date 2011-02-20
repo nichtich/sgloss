@@ -16,7 +16,7 @@ GNU Affero General Public License (the [AGPLv3] License).
   <xsl:param name="cssurl">sgloss.css</xsl:param>
   <xsl:param name="jsurl"></xsl:param>
 
-  <xsl:variable name="VERSION">0.0.1</xsl:variable>
+  <xsl:variable name="VERSION">0.0.2</xsl:variable>
 
   <xsl:template match="/sg:sgloss">
     <html>

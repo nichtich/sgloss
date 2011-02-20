@@ -11,7 +11,6 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
-  <!--xsl:import href="xmlverbatim.xsl"/-->
   <xsl:output method="html" encoding="UTF-8" indent="yes"/>
 
   <xsl:template match="/g:sgloss">
@@ -70,6 +69,7 @@ h1 { font-size: 150%; margin-bottom: 0; }
   display: inline;
 }
 .sg-article .sg-text { display:inline; }
+.sg-article h2:after { content: " "; }
 
 .sg-alias:before { content: " ("; }
 .sg-alias:after  { content: ") "; }

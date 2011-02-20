@@ -11,8 +11,8 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
-  <xsl:import href="wikisyntax.xsl"/>
-  <xsl:import href="layout.xsl"/>
+  <xsl:import href="../wikisyntax/_wikisyntax.xsl"/>
+  <xsl:import href="_core.xsl"/>
 
   <xsl:param name="cssurl">sgloss.css</xsl:param>
   <xsl:param name="jsurl"></xsl:param>

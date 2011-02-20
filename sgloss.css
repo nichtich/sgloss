@@ -111,20 +111,6 @@ h1 { font-size: 150%; margin-bottom: 0; margin-top:0; }
   border-bottom: none;
 }
 
-/* xmlverbatim */
-.xmlverb-default          { color: #333; font-family: monospace;
- font-size: medium; background-color: #fff; border: 1px solid #666 }
-.xmlverb-element-name     { color: #900 }
-.xmlverb-element-nsprefix { color: #660 }
-.xmlverb-attr-name        { color: #600 }
-.xmlverb-attr-content     { color: #009; font-weight: bold }
-.xmlverb-ns-name          { color: #660 }
-.xmlverb-ns-uri           { color: #309 }
-.xmlverb-text             { color: #000; font-weight: bold }
-.xmlverb-comment          { color: #060; font-style: italic }
-.xmlverb-pi-name          { color: #060; font-style: italic }
-.xmlverb-pi-content       { color: #066; font-style: italic }
-
 
 /* custom style */
 .sg-link, .sg-link:active, .sg-link:visited {

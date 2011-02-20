@@ -11,12 +11,12 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
-  <xsl:import href="sgloss2html.xsl"/>
-  <xsl:import href="layout.xsl"/>
+  <xsl:import href="../sgloss2html.xsl"/>
+
+  <xsl:import href="_core.xsl"/>
 
   <xsl:param name="action">view</xsl:param>
 
   <xsl:param name="title" select="/sg:sgloss/sg:title"/>
-
 
 </xsl:stylesheet>

@@ -18,8 +18,8 @@ GNU Affero General Public License (the [AGPLv3] License).
   </xsl:template>
 
   <xsl:template match="text()" mode="wikisyntax">
-    <!-- TODO: replace sequences of whitspace by one, but not remove ws like normalize-space -->
-    <xsl:value-of select="."/>
+    <!-- normalizes sequences of whitspace by one but does not trim like normalize-space() -->
+    <xsl:value-of select="translate(normalize-space(concat('&#x7F;',.,'&#x7F;')),'&#x7F;','')"/>
   </xsl:template>
 
    <xsl:template match="sg:link" mode="wikisyntax">

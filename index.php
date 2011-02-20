@@ -2,12 +2,16 @@
 
 /**
  * SGloss - Simple Glossary Wiki
- */ 
+ */
+
+include 'src/SGWTheme.php';
+SGWTheme::$basedir = 'themes';
 
 $title  = trim(@$_REQUEST['title']);
 $title = preg_replace('/[\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
 
 $format = trim(@$_REQUEST['format']);
+$theme  = trim(@$_REQUEST['theme']);
 $action = trim(@$_REQUEST['action']);
 $edit   = trim(@$_REQUEST['edit']);
 $data   = trim(@$_REQUEST['data']);
@@ -20,7 +24,8 @@ $base = (!empty($_SERVER['HTTPS']) ? "https" : "http") . "://"
 $wiki = new SGlossWiki( array( 
     "pdo"  => "sqlite:example-lbi.sqlite",
     "home" => "SGloss",
-    "base" => $base 
+    "base" => $base,
+    "theme" => $theme
 ) );
 
 $wiki->debug = array(
@@ -55,10 +60,10 @@ if ( $action == "list" ) {
 class SGlossWiki {
     var $title = "A Simple Glossary";
     var $dbh;
-    var $err;
-    var $msg;
+    var $err = array();
+    var $msg = array();
     var $home;
-    var $xslpath = "xsl/";
+    var $theme;
     var $base;
 
     function SGLossWiki( $config ) {
@@ -73,7 +78,23 @@ class SGlossWiki {
             $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
             $this->dbh->exec( self::$sql_create );
         } catch(Exception $e) {
-            $this->err = "Failed to connect to database: " . $e->getMessage();
+            $this->err[] = "Failed to connect to database: " . $e->getMessage();
+        }
+
+        $theme = $config['theme'];
+        if (!$theme) $theme = 'default';
+
+        try {
+            $this->theme = new SGWTheme( $theme );
+            # TODO: check whether at least action 'view' is given
+        } catch (Exception $e) {
+            $this->err[] = "Could not load theme " . $theme;
+        }
+ 
+        if ( $theme != "default" && !$this->theme ) try {
+            $this->theme = new SGWTheme( 'default' );
+        } catch (Exception $e) {
+            $this->err[] = "Could not load theme $theme";
         }
     }
  
@@ -89,14 +110,14 @@ class SGlossWiki {
         if ( $title != "" ) {
             $article = $this->_loadArticle( $title );
             if ( $article->exists() )
-                $this->err = "Article “${title}” already exists";
+                $this->err[] = "Article “${title}” already exists";
         } 
         $article = new SGlossArticle( $title );
         $article->setData( $data ); 
         if ( $edit == "save" && $title != "" && !$this->err ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
-                $this->msg = "Created article “${title}”";
+                $this->msg[] = "Created article “${title}”";
                 $this->_viewArticle( $article, "html" );
                 exit;
             }
@@ -118,7 +139,7 @@ class SGlossWiki {
         if ( $edit == "delete" ) {
             $this->_deleteArticle( $title );
             if (!$this->err) {
-                $this->msg = "Deleted article “${title}”";
+                $this->msg[] = "Deleted article “${title}”";
                 $this->listArticles();
                 exit;
             }
@@ -132,7 +153,7 @@ class SGlossWiki {
         if ( $edit == "save" ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
-                $this->msg = "Saved article “${title}”";
+                $this->msg[] = "Saved article “${title}”";
                 $this->_viewArticle( $article, "html" );
                 exit;
             }
@@ -180,7 +201,7 @@ class SGlossWiki {
                 }
             }
         } catch ( Exception $e ) {
-            $this->err = "Failed to load articles: " . $e->getMessage();
+            $this->err[] = "Failed to load articles: " . $e->getMessage();
         }
 
         foreach ( $links as $to => $back ) {
@@ -223,7 +244,7 @@ class SGlossWiki {
                 $articles = $sth->fetchAll( PDO::FETCH_CLASS, 'SGlossArticle' );
             }
         } catch ( Exception $e ) {
-            $this->err = "Failed to load articles: " . $e->getMessage();
+            $this->err[] = "Failed to load articles: " . $e->getMessage();
         }
 
         $dom = $this->_createDOM( "list" );
@@ -296,25 +317,33 @@ $this->debug['a'] = $article;
 
     function _createDOM( $action = "view" ) {
         $dom = new DomDocument('1.0','UTF-8');
-        $xslt = $this->xslpath . "$action.xsl"; 
-        $xslt = $dom->createProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"$xslt\"");
-        $dom->appendChild( $xslt );
+
+        if ( $this->theme ) {
+            if ( !$this->theme->actionExists( $action ) ) {
+                $this->err[] = "Theme '".$this->theme->name." does not support action '". $action . "'";
+                $action = "view";
+            }
+            $xslt = $this->theme->xslfile( $action ); // TODO: what if action "view" not available?
+            $xslt = $dom->createProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"$xslt\"");
+            $dom->appendChild( $xslt );
+        }
+
         $root = $dom->createElementNS( SGlossWiki::$NS, 'sgloss' );
         $dom->appendChild( $root );
         $title = $dom->createElementNS( SGlossWiki::$NS, 'title' );
         $title->appendChild( $dom->createTextNode( $this->title ) ); 
         $root->appendChild( $title );
-        if ($this->err) {
-            $msg = $dom->createElementNS( SGlossWiki::$NS, 'error' );
-            $msg->appendChild( $dom->createTextNode( $this->err ) ); 
-            $root->appendChild( $msg );
+        foreach ( $this->err as $msg ) {
+            $e = $dom->createElementNS( SGlossWiki::$NS, 'error' );
+            $e->appendChild( $dom->createTextNode( $msg ) ); 
+            $root->appendChild( $e );
         }
-        if ($this->msg) {
-            $msg = $dom->createElementNS( SGlossWiki::$NS, 'message' );
-            $msg->appendChild( $dom->createTextNode( $this->msg ) ); 
-            $root->appendChild( $msg );
+        foreach ($this->msg as $msg ) {
+            $e = $dom->createElementNS( SGlossWiki::$NS, 'message' );
+            $e->appendChild( $dom->createTextNode( $msg ) ); 
+            $root->appendChild( $e );
         }
-        if ($this->debug) {
+        if ( FALSE && $this->debug ) {
             $node = $dom->createElementNS( SGlossWiki::$NS, 'debug' );
             $node->appendChild( $dom->createTextNode( print_r($this->debug,1) ) ); 
             $root->appendChild( $node );
