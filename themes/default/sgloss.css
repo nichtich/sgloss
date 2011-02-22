@@ -1,10 +1,12 @@
-body {
-  margin: 0px; padding: 0px;
+body {  
+  margin: 0px auto;
+  padding: 0px;
 }
 
 #header {
   background: #DDD;
   padding: 0.5em 1em;
+  clear: both;
 }
 #header a.title {
   font-weight: bold;
@@ -26,9 +28,33 @@ a:hover {
   padding: 0.5em 1em;
 }
 
-.message, .error { padding: 0.5em; }
-.message { color: #090;  background-color: #afa; }
-.error { color: #900; background-color: #faa; }
+/* messages */
+#msg-container {  
+  float:left; width: 100%; z-index: 100;
+  text-align: center;
+  -moz-box-shadow: 0px 2px 4px #777777;
+  -webkit-box-shadow: 0px 2px 4px #777777;
+  box-shadow: 0px 2px 4px #777777;
+
+}
+#msg-container div {
+  border-bottom: 1px solid #000;
+  padding: 0.5em; 
+}
+.message { 
+  color: #090;  background-color: #afa; 
+}
+.error { 
+  color: #900; background-color: #faa; 
+}
+
+.msg-close {
+  cursor: pointer;
+  float: right;
+  margin-right: 16px;
+  text-decoration: none;
+  font-weight: bold;
+}
 
 /*div.msg_info { border: 1px #028 solid; background-color: #8cf; }
 div.msg_warning { border: 1px #830 solid; background-color: #fc8; }*/

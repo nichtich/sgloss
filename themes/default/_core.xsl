@@ -13,8 +13,7 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:output method="html" encoding="UTF-8" indent="yes"/>
 
-  <xsl:param name="cssurl">sgloss.css</xsl:param>
-  <xsl:param name="jsurl"></xsl:param>
+  <xsl:param name="themeurl">themes/default/</xsl:param>
 
   <xsl:variable name="VERSION">0.0.2</xsl:variable>
 
@@ -22,8 +21,12 @@ GNU Affero General Public License (the [AGPLv3] License).
     <html>
       <xsl:call-template name="htmlhead"/>
       <body>
+        <xsl:if test="sg:message|sg:error">
+          <div id="msg-container">
+             <xsl:apply-templates select="sg:message|sg:error"/>
+          </div>
+        </xsl:if>
         <xsl:apply-templates select="." mode="header"/>
-        <xsl:apply-templates select="sg:message|sg:error"/>
         <div id="body">
            <xsl:if test="$title">
              <h1><xsl:value-of select="$title"/></h1>
@@ -46,12 +49,9 @@ GNU Affero General Public License (the [AGPLv3] License).
       <title>
        <xsl:value-of select="$title"/>
       </title>
-      <xsl:if test="$cssurl">
-        <link rel="stylesheet" type="text/css" href="{$cssurl}"/>
-      </xsl:if>
-      <xsl:if test="$jsurl">
-        <script type="text/javascript" src="{$jsurl}"/>
-      </xsl:if>
+      <link rel="stylesheet" type="text/css" href="{$themeurl}sgloss.css"/>
+      <script type="text/javascript" src="{$themeurl}jquery-1.5.min.js"/>
+      <script type="text/javascript" src="{$themeurl}sgloss.js"/>
     </head>
   </xsl:template>
 
@@ -78,6 +78,7 @@ GNU Affero General Public License (the [AGPLv3] License).
     </div>
   </xsl:template>
 
+  <!-- messages -->
   <xsl:template match="sg:message">
     <div class="message">
       <xsl:apply-templates/>

@@ -260,13 +260,18 @@ class SGlossWiki {
     function _sendDOM($dom) {
         header('content-type: text/xml; encoding=UTF-8');
         # preprocess:
+        $this->_enrichDOM($dom);
+        print $dom->saveXML();
+    }
+
+    function _enrichDOM($dom) {
+        if ($this->err) return;
 
         $xpath = new DOMXPath($dom);
         $xpath->registerNamespace('g',SGlossWiki::$NS);
 
         $articles = array();
         // TODO: fill with articles from DOM
-
 
         $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
         $alinks = $xpath->evaluate('g:article/g:text/g:link[@to]');
@@ -290,8 +295,6 @@ class SGlossWiki {
                 $link->appendChild( $attr );
             } 
         }
-
-        print $dom->saveXML();
     }
 
     function _sendArticle( $article, $action ) {
