@@ -1,0 +1,8 @@
+
+
+# disallow some files
+<Files README>
+order deny,allow
+deny from all
+</Files>
+

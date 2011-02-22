@@ -10,3 +10,21 @@ This project consists of:
 
 You will find more information in the file 'about.xml' which
 is also an example of an sgloss glossary.
+
+
+GETTING STARTED
+
+1. Put the project files into a web server that supports PHP.
+
+2. Make sure that the directory 'data' is writeable by the
+   user which your PHP scripts are run by. For instance:
+
+   $  sudo chown www-data data 
+
+3. Locate your browser to the web directory where you have
+   installed the project files.
+
+4. Make sure that the data directory is not readable via web
+
+   http://example.org/data/
+
