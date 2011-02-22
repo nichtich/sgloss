@@ -15,6 +15,8 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:param name="themeurl">themes/default/</xsl:param>
 
+  <xsl:variable name="themes" select="document('../')"/>
+
   <xsl:variable name="VERSION">0.0.2</xsl:variable>
 
   <xsl:template match="/sg:sgloss">
@@ -67,10 +69,29 @@ GNU Affero General Public License (the [AGPLv3] License).
     </div>
   </xsl:template>
 
+  <xsl:template match="sg:themes">
+    <div id="select-themes">
+      Themes:
+      <ul class="csv">
+        <xsl:for-each select=".//sg:theme">
+          <li>
+            <a href="?theme={@name}">
+              <xsl:if test="@name = 'default'">
+                <xsl:attribute name="class">selected</xsl:attribute>
+              </xsl:if>
+              <xsl:value-of select="@name"/>
+            </a>
+          </li>
+        </xsl:for-each>
+      </ul>
+    </div>
+  </xsl:template>
+
   <xsl:template match="sg:sgloss" mode="footer">
     <xsl:if test="//sg:debug">
       <div class="debug"><pre><xsl:value-of select="//sg:debug"/></pre></div>
     </xsl:if>
+    <xsl:apply-templates select="$themes"/>
     <div id="footer">
       powered by <a href="https://github.com/nichtich/sgloss">SGloss</a>
       &#xA0;<xsl:value-of select="$VERSION"/>&#xA0;

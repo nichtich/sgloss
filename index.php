@@ -22,7 +22,7 @@ $base = (!empty($_SERVER['HTTPS']) ? "https" : "http") . "://"
       . $base . $_SERVER['PHP_SELF'];
 
 $wiki = new SGlossWiki( array( 
-    "pdo"  => "sqlite:example-lbi.sqlite",
+    "pdo"  => "sqlite:data/example.sqlite",
     "home" => "SGloss",
     "base" => $base,
     "theme" => $theme
@@ -294,7 +294,7 @@ class SGlossWiki {
                 $attr->appendChild( $dom->createTextNode( $action ) );
                 $link->appendChild( $attr );
             } 
-        }
+        }        
     }
 
     function _sendArticle( $article, $action ) {

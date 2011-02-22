@@ -13,4 +13,6 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:import href="../sgloss2html.xsl" />
 
+  <xsl:param name="themeurl">themes/print/</xsl:param>
+
 </xsl:stylesheet>

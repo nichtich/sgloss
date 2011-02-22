@@ -32,7 +32,7 @@ GNU Affero General Public License (the [AGPLv3] License).
         <xsl:value-of select="sg:title"/>
       </a>
       <xsl:if test="sg:backlink">
-        <ul class="backlinks">
+        <ul class="backlinks csv">
           <xsl:for-each select="sg:backlink">
             <xsl:sort select="@to"/>
             <li>

@@ -11,6 +11,8 @@ GNU Affero General Public License (the [AGPLv3] License).
   xmlns="http://www.w3.org/1999/xhtml"
 >
 
+  <xsl:param name="themeurl"/>
+
   <xsl:output method="html" encoding="UTF-8" indent="yes"/>
 
   <xsl:template match="/g:sgloss">
@@ -20,7 +22,7 @@ GNU Affero General Public License (the [AGPLv3] License).
         <title>
           <xsl:value-of select="g:title"/>
         </title>
-        <xsl:call-template name="stylesheet"/>
+        <link rel="stylesheet" type="text/css" href="{$themeurl}sgloss.css"/>
       </head>
       <body>
         <div class="sgloss">
@@ -33,94 +35,6 @@ GNU Affero General Public License (the [AGPLv3] License).
         </div>
       </body>
     </html>
-  </xsl:template>
-
-  <xsl:template name="stylesheet">
-    <style>
-
-.sg-articles {
-  text-align: justify;
-  -moz-column-width: 20em;
-  -moz-column-gap: 2em;
-  -webkit-column-width: 20em;
-  -webkit-column-gap: 2em;
-}
-
-
-.missing {
-  color: #666;
-}
-
-h1 { font-size: 150%; margin-bottom: 0; }
-
-.warn { background: #faa; }
-
-/* .quot:before { content: " &#x201E;&#x201C;"; } */
-
-.sg-about { margin-top:0; font-style: italic; }
-
-.sg-article {
-  clear:both;
-  padding-bottom:1.5em;
-}
-
-.sg-article h2 {
-  font-size: 100%; 
-  display: inline;
-}
-.sg-article .sg-text { display:inline; }
-.sg-article h2:after { content: " "; }
-
-.sg-alias:before { content: " ("; }
-.sg-alias:after  { content: ") "; }
-
-.sg-see {
-    font-size:small;
-    padding-top:0.3em;
-}
-.sg-reference {
-    font-size: small;
-}
-.sg-author {
-    font-size: small;
-    float:right;
-    font-style:italic;
-}
-
-/* internal and external links */
-.sg-link:before { content: "&#x2197;&#xA0;"; }
-.sg-link, .sg-link:active, .sg-link:visited {
-    border-bottom: 1px #000 dotted;
-    text-decoration: none; 
-    color: #000;
-}
-.sg-link:hover {
-    border-bottom: 2px #000 solid;
-}
-.sg-extlink, .sg-extlink:active, .sg-extlink:visited {
-  text-decoration: none; 
-  color: #000;
-  border-bottom: none;
-}
-.sg-extlink:hover { 
-  text-decoration: underline; 
-  border-bottom: none;
-}
-
-/* xmlverbatim */
-.xmlverb-default          { color: #333; font-family: monospace;
- font-size: medium; background-color: #fff; border: 1px solid #666 }
-.xmlverb-element-name     { color: #900 }
-.xmlverb-element-nsprefix { color: #660 }
-.xmlverb-attr-name        { color: #600 }
-.xmlverb-attr-content     { color: #009; font-weight: bold }
-.xmlverb-ns-name          { color: #660 }
-.xmlverb-ns-uri           { color: #309 }
-.xmlverb-text             { color: #000; font-weight: bold }
-.xmlverb-comment          { color: #060; font-style: italic }
-.xmlverb-pi-name          { color: #060; font-style: italic }
-.xmlverb-pi-content       { color: #066; font-style: italic }
-    </style>
   </xsl:template>
 
   <xsl:template match="g:article">
