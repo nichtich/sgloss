@@ -75,8 +75,11 @@ GNU Affero General Public License (the [AGPLv3] License).
           </xsl:if>
         </div>
       </xsl:if>
-    </div>
+      <xsl:apply-templates select="." mode="properties"/>
+    </div> <xsl:comment>article</xsl:comment>
   </xsl:template>
+
+  <xsl:template match="g:article" mode="properties"/>
 
   <xsl:template match="g:text">
     <div class="sg-text">

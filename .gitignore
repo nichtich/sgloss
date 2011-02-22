@@ -8,3 +8,6 @@ Makefile.old
 
 # distributions
 *.gz
+
+# local data
+data/example.sqlite

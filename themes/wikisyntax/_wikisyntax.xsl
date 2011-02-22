@@ -15,6 +15,17 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:template match="sg:article" mode="wikisyntax">
     <xsl:apply-templates select="sg:text" mode="wikisyntax"/>
+    <xsl:for-each select="sg:property">
+      <xsl:apply-templates select="." mode="wikisyntax"/>
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template match="sg:property" mode="wikisyntax">
+    <xsl:text>&#xA;</xsl:text>
+    <xsl:text>&#xA;</xsl:text>
+    <xsl:value-of select="@name"/>
+    <xsl:text> = </xsl:text>
+    <xsl:value-of select="translate(normalize-space(concat('&#x7F;',.,'&#x7F;')),'&#x7F;','')"/>
   </xsl:template>
 
   <xsl:template match="text()" mode="wikisyntax">

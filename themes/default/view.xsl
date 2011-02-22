@@ -12,11 +12,28 @@ GNU Affero General Public License (the [AGPLv3] License).
 >
 
   <xsl:import href="../sgloss2html.xsl"/>
-
   <xsl:import href="_core.xsl"/>
+
+  <xsl:output method="html" encoding="UTF-8" indent="yes"/>
 
   <xsl:param name="action">view</xsl:param>
 
   <xsl:param name="title" select="/sg:sgloss/sg:title"/>
+
+  <xsl:template match="sg:article" mode="properties">
+    (<xsl:value-of select="string-length(normalize-space(sg:text))"/>)
+    <xsl:if test="sg:property">
+      <div class="properties">
+        <dl>
+          <xsl:apply-templates select="sg:property"/>
+        </dl>
+      </div>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template match="sg:property">
+    <dt><xsl:value-of select="@name"/></dt>
+    <dd><xsl:value-of select="."/></dd>
+  </xsl:template>
 
 </xsl:stylesheet>

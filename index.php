@@ -49,14 +49,6 @@ if ( $action == "list" ) {
     $wiki->viewArticle( $title, $format );
 }
 
-#print $wiki->err;
-#    $dbh->exec(<<<SQL
-#CREATE TABLE IF NOT EXISTS (
-#    title NOT NULL,
-#    data,
-#    timestamp  
-#); SQL;
-
 class SGlossWiki {
     var $title = "A Simple Glossary";
     var $dbh;
@@ -148,8 +140,9 @@ class SGlossWiki {
         $article = new SGlossArticle( $title );
         $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
         $article->exists = ( $sth->execute(array($title)) && $sth->fetch() ) ? TRUE : FALSE;
+        
         $article->setData( $data, TRUE ); 
-
+        
         if ( $edit == "save" ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
@@ -158,6 +151,7 @@ class SGlossWiki {
                 exit;
             }
         }
+
         $this->_editArticle( $article );
     }
 
@@ -298,8 +292,9 @@ class SGlossWiki {
     }
 
     function _sendArticle( $article, $action ) {
-        $adom = $article->getDOM();
-$this->debug['a'] = $article;
+        $properties = $article->properties;
+        $adom = $article->getDOM( $properties );
+        #$this->debug['a'] = $article;
         $dom = $this->_createDOM( $action );
         $a2 = $dom->importNode( $adom->documentElement, TRUE );
         $dom->documentElement->appendChild( $a2  );
@@ -366,6 +361,7 @@ $this->debug['a'] = $article;
             $sth = $this->dbh->prepare('INSERT INTO articles VALUES (?,?)');
             $sth->execute(array( $article->title, $article->xmlContent() ));
             $article->exists = TRUE;
+            $this->_replaceProperties( $article->title, $article->properties );
         } catch ( Exception $e ) {
             $this->err = "Failed to save article: " . $e->getMessage();
         }
@@ -375,6 +371,8 @@ $this->debug['a'] = $article;
         if ( $this->err ) return;
         try {
             $sth = $this->dbh->prepare('DELETE FROM articles WHERE title = ?');
+            $sth->execute(array( $title ));
+            $sth = $this->dbh->prepare("DELETE FROM properties WHERE `article` = ?");
             $sth->execute(array( $title ));
         } catch ( Exception $e ) {
             $this->err = "Failed to delete article: " . $e->getMessage();
@@ -396,7 +394,36 @@ $this->debug['a'] = $article;
                $article->title = $title;
             }
         }
+        $article->properties = $this->_getProperties( $article->title );
         return $article;
+    }
+
+    function _getProperties( $title ) {
+        if ($this->err) return array();
+        $properties = array();
+        $sth = $this->dbh->prepare("SELECT `property`,`value` FROM properties WHERE article=?");
+        if ( $sth->execute(array( $title )) ) {
+            $result = $sth->fetchAll();
+            foreach ( $result as $r ) {
+                $p = $r[0];
+                $v = $r[1];
+                if (array_key_exists($p,$properties)) 
+                    $properties[$p][] = $v; else $properties[$p] = array( $v );
+            }
+        }
+        return $properties;
+    }
+
+    function _replaceProperties( $title, $properties ) {
+        if ($this->err) return array();
+        $sth = $this->dbh->prepare("DELETE FROM properties WHERE article=?");
+        $sth->execute(array($title));
+        $sth = $this->dbh->prepare("INSERT INTO properties VALUES(?,?,?)");
+        foreach ($properties as $p => $values) {
+            foreach ( $values as $v ) {
+                $sth->execute(array( $title, $p, $v ));
+            }
+        }
     }
 
     static $NS = "http://jakobvoss.de/sgloss/";
@@ -406,15 +433,22 @@ CREATE TABLE IF NOT EXISTS articles (
    title PRIMARY KEY ON CONFLICT REPLACE,
    xml
 );
+CREATE TABLE IF NOT EXISTS properties (
+  'article' NOT NULL,
+  'property' NOT NULL,
+  'value'
+);
 TEST;
 
 }
 
+# TODO: split this object from storage details
 class SGlossArticle {
     public $title;
     public $xml;
     public $dom;
     public $exists = FALSE;
+    public $properties = array();
 
     public function SGlossArticle( $title = "" ) {
         $this->title = $title;
@@ -430,7 +464,7 @@ class SGlossArticle {
     }
 
     // TODO: return documentfragment as content
-    public function getDOM() {
+    public function getDOM( $properties = array() ) {
         if (!$this->dom) {
             $this->dom = new DomDocument('1.0','UTF-8');
             if ( $this->xml ) {
@@ -454,6 +488,17 @@ class SGlossArticle {
                 $this->dom->documentElement->appendChild( $attr );
             }
         }
+        foreach ( $properties as $p => $values ) {
+            foreach ( $values as $v ) {
+                $dom = $this->dom;  
+                $elem = $dom->createElementNS( SGlossWiki::$NS, 'property' );
+                $elem->appendChild( $dom->createTextNode( $v ) ); 
+                $attr = $dom->createAttribute('name');
+                $attr->appendChild( $dom->createTextNode($p) );
+                $elem->appendChild( $attr );
+                $this->dom->documentElement->appendChild( $elem );
+            }
+        }
         return $this->dom;
     }
 
@@ -475,7 +520,9 @@ class SGlossArticle {
     }
 
     function setData( $data, $exists = NULL ) {
-        if ( $exists !== NULL ) $this->exists = $exists;
+        $properties = array();
+
+        if ( $exists !== NULL ) $this->exists = $exists;        
 
         $dom = $this->getDOM();
         $root = $dom->documentElement;
@@ -494,8 +541,14 @@ class SGlossArticle {
               continue;
            }
 
-           if ($lastempty) {
-               # TODO: metadata
+           if ( $lastempty ) {
+               if ( preg_match('/^([a-zA-Z][a-zA-Z]+)\s*[=:]\s*(.*)$/',$line,$match) ) {
+                  $key = $match[1];
+                  $v = trim($match[2]);
+                  if (array_key_exists($key,$properties)) 
+                      $properties[$key][] = $v; else $properties[$key] = array($v);
+                  continue;
+               }
            }
 
            if ( preg_match('/^\[\[([^]]*)\]\]/',$text) ) $text = " $text";
@@ -545,6 +598,7 @@ class SGlossArticle {
 
         $root->appendChild( $textElem );
 
+        $this->properties = $properties;
     }
 }
 

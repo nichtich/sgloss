@@ -31,7 +31,7 @@ a:hover {
 }
 #body {
   background: #FFF;
-  padding: 0.5em 1em;
+  padding: 0.5em 1em 0em 1em;
 }
 
 /* messages */
@@ -88,10 +88,37 @@ div.msg_warning { border: 1px #830 solid; background-color: #fc8; }*/
 h1 { font-size: 150%; margin-bottom: 0; margin-top:0; }
 
 
+/* definition list (not for IE<8) */
+.properties { 
+  padding-left: 1em;
+  border-left: 2px solid #666;
+  margin-bottom: 0px;
+}
+.properties dl {
+  overflow: auto; width: 100%
+  margin-bottom: 0px;
+}
+.properties dt { font-weight: bold; }
+.properties dt:after { content: ":\A0"; }
+.properties dt, .properties dd {
+  float:left;
+  margin:0; padding: 0;
+}
+.properties dd + dt {
+  clear: left;
+}
+
 /* custom style */
 .sg-link, .sg-link:active, .sg-link:visited {
     color: #00A;
     border: 0px;
 }
 .sg-link:before { content: ""; }
-
+.sg-articles {
+  margin:0; padding:0;
+}
+.sg-article {
+  margin:0; 
+  padding: 0.25em 0 0.25em 0;
+  border-top: 1px dotted #666;
+}

@@ -42,6 +42,7 @@ GNU Affero General Public License (the [AGPLv3] License).
         <xsl:apply-templates select="." mode="wikisyntax"/>
       </textarea> 
       <br/>
+      <input type="submit" name="edit" value="continue"/>
       <input type="submit" name="edit" value="save"/>
       &#xA0;
       &#xA0;
