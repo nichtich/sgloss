@@ -1,13 +1,20 @@
 <?php
-
 /**
- * A Theme is a directory of xslt scripts to transform SGWiki output
- * Each Theme should provide a set of core actions: 
- * - view (view one or more articles)
- * - edit (edit one or more articles)
- * - create (create a new article)
+ * A Theme provides a set of scripts to transform SGloss data for 
+ * different actions. At least the action 'view' must be supported.
  */
 class SGWTheme {
+    static $basedir = "themes";
+    static function loadThemes() {
+        $themes = array();
+        foreach ( scandir( self::$basedir ) as $entry ) {
+            try {
+                $themes[] = new SGWTheme( $entry );
+            } catch( Exception $e ) {
+            }
+        }
+        return $themes;
+    }
 
     var $name;
     var $actions = array();
@@ -22,7 +29,8 @@ class SGWTheme {
                      $this->actions[ $action ] = $action;
                  }
              }
-         } else {
+         } 
+         if (!$this->actions["view"]) {
              throw new Exception("could not initialize theme `$name`");
          }
     }
@@ -36,29 +44,18 @@ class SGWTheme {
         return implode("\n",$xml);
     }
 
-    function actionExists( $action ) {
+    function hasAction( $action ) {
         return array_key_exists( $action, $this->actions );
     }
 
-    function xslfile($action) {
-        if ( $this->actionExists($action) ) {
+    function xslFor($action) {
+        if ( $this->hasAction($action) ) {
             return self::$basedir . '/' . $this->name . '/' . $action . '.xsl';
         } else {
             return "";
         }
     }
 
-    static $basedir = ".";
-    static function loadThemes() {
-        $themes = array();
-        foreach ( scandir( self::$basedir ) as $entry ) {
-            try {
-                $themes[] = new SGWTheme( $entry );
-            } catch( Exception $e ) {
-            }
-        }
-        return $themes;
-    }
 }
 
 ?>

@@ -1,11 +1,9 @@
 <?php
-
 /**
  * SGloss - Simple Glossary Wiki
  */
 
 include 'src/SGWTheme.php';
-SGWTheme::$basedir = 'themes';
 
 $title  = trim(@$_REQUEST['title']);
 $title = preg_replace('/[\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
@@ -317,11 +315,11 @@ class SGlossWiki {
         $dom = new DomDocument('1.0','UTF-8');
 
         if ( $this->theme ) {
-            if ( !$this->theme->actionExists( $action ) ) {
+            if ( !$this->theme->hasAction( $action ) ) {
                 $this->err[] = "Theme '".$this->theme->name." does not support action '". $action . "'";
                 $action = "view";
             }
-            $xslt = $this->theme->xslfile( $action ); // TODO: what if action "view" not available?
+            $xslt = $this->theme->xslFor( $action );
             $xslt = $dom->createProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"$xslt\"");
             $dom->appendChild( $xslt );
         }
