@@ -1,4 +1,13 @@
-h1 { font-size: 150%; margin-bottom: 0; }
+body {
+  font-family: 'Baskerville',Georgia,Times,serif;
+  font-size: 100%;
+  line-height: 120%;
+}
+
+h1 { 
+  font-size: 150%; 
+  margin-bottom: 0.5em; 
+}
 
 .sg-articles {
 /*  text-align: justify;

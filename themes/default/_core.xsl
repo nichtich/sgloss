@@ -17,7 +17,13 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:variable name="themes" select="document('../')"/>
 
-  <xsl:variable name="VERSION">0.0.2</xsl:variable>
+  <xsl:variable name="VERSION" select="normalize-space(/*/@version)"/>
+
+    <xsl:variable name="aonetitle">
+      <xsl:if test="count(//sg:article)=1">
+        <xsl:value-of select="//sg:article/sg:title"/>
+      </xsl:if>
+    </xsl:variable>
 
   <xsl:template match="/sg:sgloss">
     <html>
@@ -61,11 +67,11 @@ GNU Affero General Public License (the [AGPLv3] License).
     <div id="header">
       <a class="title" href="?"><xsl:value-of select="sg:title"/></a>
       &#xA0;
-      <a href="?action=list">a-z</a>
-      &#xA0;
-      <a href="?action=create">create</a>
-      &#xA0;
-      <a href="?action=links">links</a>
+      <ul>
+        <li><a href="?action=list">a-z</a></li>
+        <li><a href="?action=create">create</a></li>
+        <li><a href="?action=links">links</a></li>
+      </ul>
     </div>
   </xsl:template>
 
@@ -75,7 +81,7 @@ GNU Affero General Public License (the [AGPLv3] License).
       <ul class="csv">
         <xsl:for-each select=".//sg:theme">
           <li>
-            <a href="?theme={@name}">
+            <a href="?theme={@name}&amp;title={$aonetitle}">
               <xsl:if test="@name = 'default'">
                 <xsl:attribute name="class">selected</xsl:attribute>
               </xsl:if>
@@ -94,7 +100,9 @@ GNU Affero General Public License (the [AGPLv3] License).
     <xsl:apply-templates select="$themes"/>
     <div id="footer">
       powered by <a href="https://github.com/nichtich/sgloss">SGloss</a>
-      &#xA0;<xsl:value-of select="$VERSION"/>&#xA0;
+      <xsl:text> </xsl:text>
+      <xsl:value-of select="$VERSION"/>
+      <xsl:text> </xsl:text>
       (just SQLite, PHP, XML, XSLT, HTML, CSS)
     </div>
   </xsl:template>

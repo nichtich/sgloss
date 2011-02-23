@@ -73,9 +73,11 @@ class SGlossWiki {
     var $theme;
     var $base;
     var $permissions;
+    var $version;
 
     function SGLossWiki( $config ) {
         $this->permissions = $config['permissions'];
+        $this->version     = $config['version'];
 
         if( isset($config['home']) ) $this->home = $config['home'];
         $this->base = $config['base'];
@@ -312,6 +314,9 @@ class SGlossWiki {
                 $link->appendChild( $attr );
             } 
         }        
+        $attr = $dom->createAttribute('version');
+        $attr->appendChild( $dom->createTextNode($this->version) );
+        $dom->documentElement->appendChild( $attr );
     }
 
     function _sendArticle( $article, $action ) {

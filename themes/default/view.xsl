@@ -21,7 +21,7 @@ GNU Affero General Public License (the [AGPLv3] License).
   <xsl:param name="title" select="/sg:sgloss/sg:title"/>
 
   <xsl:template match="sg:article" mode="properties">
-    (<xsl:value-of select="string-length(normalize-space(sg:text))"/>)
+    <span class="sg-length"><xsl:value-of select="string-length(normalize-space(sg:text))"/></span>
     <xsl:if test="sg:property">
       <div class="properties">
         <dl>

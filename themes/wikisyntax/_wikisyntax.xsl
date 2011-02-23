@@ -14,7 +14,10 @@ GNU Affero General Public License (the [AGPLv3] License).
   <xsl:output method="text"/>
 
   <xsl:template match="sg:article" mode="wikisyntax">
-    <xsl:apply-templates select="sg:text" mode="wikisyntax"/>
+    <xsl:variable name="text">
+      <xsl:apply-templates select="sg:text" mode="wikisyntax"/>
+    </xsl:variable>
+    <xsl:value-of select="$text"/>
     <xsl:for-each select="sg:property">
       <xsl:apply-templates select="." mode="wikisyntax"/>
     </xsl:for-each>
@@ -30,7 +33,11 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:template match="text()" mode="wikisyntax">
     <!-- normalizes sequences of whitspace by one but does not trim like normalize-space() -->
-    <xsl:value-of select="translate(normalize-space(concat('&#x7F;',.,'&#x7F;')),'&#x7F;','')"/>
+    <xsl:variable name="text">
+      <xsl:value-of select="translate(normalize-space(concat('&#x7F;',.,'&#x7F;')),'&#x7F;','')"/>
+    </xsl:variable>
+    <!-- TODO: fold (see http://www.stylusstudio.com/xsllist/200112/post10650.html) -->
+    <xsl:value-of select="$text"/>
   </xsl:template>
 
    <xsl:template match="sg:link" mode="wikisyntax">
