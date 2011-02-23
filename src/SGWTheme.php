@@ -30,7 +30,7 @@ class SGWTheme {
                  }
              }
          } 
-         if (!$this->actions["view"]) {
+         if (empty($this->actions["view"])) {
              throw new Exception("could not initialize theme `$name`");
          }
     }

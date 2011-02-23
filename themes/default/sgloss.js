@@ -1,4 +1,5 @@
 $(document).ready(function() {
+
   /* Messages */
   $('#msg-container div').each(function() {
     var msg = $(this);
@@ -6,4 +7,8 @@ $(document).ready(function() {
     close.click(function() { msg.fadeOut(); });
     msg.prepend(close);
   });
+
+  /* filter upload files to be of type .xml */
+  // TODO
+
 });

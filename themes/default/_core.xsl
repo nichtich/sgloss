@@ -39,17 +39,25 @@ GNU Affero General Public License (the [AGPLv3] License).
            <xsl:if test="$title">
              <h1><xsl:value-of select="$title"/></h1>
            </xsl:if>
-           <div class="sg-articles">
-            <xsl:apply-templates select="sg:article">
-              <xsl:sort select="sg:title"/>
-              <xsl:with-param name="editable" select="true()"/>
-            </xsl:apply-templates>
-          </div>
+          <xsl:apply-templates select="." mode="pre-articles"/>
+           <xsl:if test="sg:article">
+             <div class="sg-articles">
+              <xsl:apply-templates select="sg:article">
+                <xsl:sort select="sg:title"/>
+                <xsl:with-param name="editable" select="true()"/>
+              </xsl:apply-templates>
+            </div>
+          </xsl:if>
+          <xsl:apply-templates select="." mode="post-articles"/>
         </div>
         <xsl:apply-templates select="." mode="footer"/>
       </body>
     </html>
   </xsl:template>
+
+  <!-- hooks -->
+  <xsl:template match="sg:sgloss" mode="pre-articles"/>
+  <xsl:template match="sg:sgloss" mode="post-articles"/>
 
   <xsl:template name="htmlhead">
     <head>
@@ -68,9 +76,11 @@ GNU Affero General Public License (the [AGPLv3] License).
       <a class="title" href="?"><xsl:value-of select="sg:title"/></a>
       &#xA0;
       <ul>
+        <!-- TODO: the actions should come from the server -->
         <li><a href="?action=list">a-z</a></li>
         <li><a href="?action=create">create</a></li>
         <li><a href="?action=links">links</a></li>
+        <li><a href="?action=import">import</a></li>
       </ul>
     </div>
   </xsl:template>

@@ -42,7 +42,7 @@ $wiki->debug = array(
 $perm = $wiki->permissions["all"];
 if ( !empty($action) ) {
     if ( empty($perm[ $action ])) {
-        $wiki->err[] = "action not allowed";
+        $wiki->err[] = "Sorry, but you are not allowed to perform this action!";
         $action = "view";
     }
 }
@@ -59,7 +59,7 @@ if ( $action == "list" ) {
     else
         $wiki->editArticle( $title, $data, $edit );
 } else if ( $action == "import" ) {
-    # TODO
+    $wiki->import();# TODO
 } else {
     $wiki->viewArticle( $title, $format );
 }
@@ -193,6 +193,11 @@ class SGlossWiki {
             $article = new SGlossArticle( $title );
             $this->_viewArticle( $article, $format ); 
         }
+    }
+
+    function import() {
+        $dom = $this->_createDOM( "import" );
+        $this->_sendDOM($dom);
     }
 
     function listLinks() {
@@ -346,7 +351,7 @@ class SGlossWiki {
 
         if ( $this->theme ) {
             if ( !$this->theme->hasAction( $action ) ) {
-                $this->err[] = "Theme '".$this->theme->name." does not support action '". $action . "'";
+                $this->err[] = "Whoops! Your current theme does not support the selected action!";
                 $action = "view";
             }
             $xslt = $this->theme->xslFor( $action );

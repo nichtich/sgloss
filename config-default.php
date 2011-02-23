@@ -36,7 +36,8 @@ $sgconf = array(
       "edit"   => true,
       "create" => true,
       "links"  => true,
-      "list"   => true
+      "list"   => true,
+      "import" => true
     )
   ),
 
