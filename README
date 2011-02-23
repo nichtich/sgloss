@@ -21,10 +21,13 @@ GETTING STARTED
 
    $  sudo chown www-data data 
 
-3. Locate your browser to the web directory where you have
+3. Optionally copy 'config-local-example.php' to 'config-local.php'
+   and adjust your configuration.
+
+4. Locate your browser to the web directory where you have
    installed the project files.
 
-4. Make sure that the data directory is not readable via web
+5. Make sure that the data directory is not readable via web
 
    http://example.org/data/
 

@@ -3,32 +3,49 @@
  * SGloss - Simple Glossary Wiki
  */
 
+# load libraries
 include 'src/SGWTheme.php';
 
+# load configuration
+include 'config-default.php';
+if (file_exists('config-local.php')) { 
+    include 'config-local.php';
+}
+
+# initialize wiki
+$wiki = new SGlossWiki( $sgconf );
+
+
+# get and check parameters
 $title  = trim(@$_REQUEST['title']);
-$title = preg_replace('/[\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
+$title = preg_replace('/[<>`&\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
 
-$format = trim(@$_REQUEST['format']);
-$theme  = trim(@$_REQUEST['theme']);
-$action = trim(@$_REQUEST['action']);
-$edit   = trim(@$_REQUEST['edit']);
+$action = preg_replace('/[^a-z]/','',trim(@$_REQUEST['action']));
+
+$format = "html"; #trim(@$_REQUEST['format']);
+
+$edit = preg_replace('/[^a-z]/','',trim(@$_REQUEST['edit']));
+
+# TODO: better trim and add error message
 $data   = trim(@$_REQUEST['data']);
+if (strlen($data) > 30*1024) $data = substr($data,0,30*1024) ;
 
-# Get current base URL
-$base = empty($_SERVER['SERVER_NAME']) ? 'localhost' : $_SERVER['SERVER_NAME'];
-$base = (!empty($_SERVER['HTTPS']) ? "https" : "http") . "://"
-      . $base . $_SERVER['PHP_SELF'];
+if ( !empty($_REQUEST['theme']) ) 
+    $wiki->setTheme( $_REQUEST['theme'] );
 
-$wiki = new SGlossWiki( array( 
-    "pdo"  => "sqlite:data/example.sqlite",
-    "home" => "SGloss",
-    "base" => $base,
-    "theme" => $theme
-) );
 
 $wiki->debug = array(
-    "request" => $_REQUEST
+#    "request" => $_REQUEST
 );
+
+# perform action
+$perm = $wiki->permissions["all"];
+if ( !empty($action) ) {
+    if ( empty($perm[ $action ])) {
+        $wiki->err[] = "action not allowed";
+        $action = "view";
+    }
+}
 
 if ( $action == "list" ) {
     $wiki->listArticles();
@@ -48,22 +65,25 @@ if ( $action == "list" ) {
 }
 
 class SGlossWiki {
-    var $title = "A Simple Glossary";
+    var $title = "SGlossWiki";
     var $dbh;
     var $err = array();
     var $msg = array();
-    var $home;
+    var $home = "";
     var $theme;
     var $base;
+    var $permissions;
 
     function SGLossWiki( $config ) {
-        $this->home = $config['home'];
+        $this->permissions = $config['permissions'];
+
+        if( isset($config['home']) ) $this->home = $config['home'];
         $this->base = $config['base'];
 
         if (isset($config['title'])) $this->title = $config['title'];
       
         try {
-            if (!($this->dbh = new PDO( $config['pdo'] ))) 
+            if (!($this->dbh = new PDO( @$config['pdo'] ))) 
                 throw new Exception('could not create PDO object');
             $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
             $this->dbh->exec( self::$sql_create );
@@ -71,12 +91,13 @@ class SGlossWiki {
             $this->err[] = "Failed to connect to database: " . $e->getMessage();
         }
 
-        $theme = $config['theme'];
-        if (!$theme) $theme = 'default';
-
+        if ( !empty($config['theme']) ) 
+            $this->setTheme( $config['theme'] );
+    }
+ 
+    function setTheme( $theme ) {
         try {
-            $this->theme = new SGWTheme( $theme );
-            # TODO: check whether at least action 'view' is given
+            $this->theme = new SGWTheme( $theme ); # constructor checks valid names
         } catch (Exception $e) {
             $this->err[] = "Could not load theme " . $theme;
         }
@@ -155,16 +176,20 @@ class SGlossWiki {
 
     function viewArticle( $title, $format="html" ) {
         if ( $title == "" ) $title = $this->home;
+        if ( $title == "" ) { $this->listArticles(); return; } # TODO: only if allowed!
         if ( !$format ) $format = "html";
 
         $article = $this->_loadArticle( $title );
 
         if ( $article->exists() ) {
             $this->_viewArticle( $article, $format ); 
-        } else {
+        } else if ( $this->permissions["all"]["edit"] ) {
             # TODO: send 404 if not exists and format != html
             header("Location: " . $this->base . "?action=edit&title=" . urlencode($title));
             exit;
+        } else {
+            $article = new SGlossArticle( $title );
+            $this->_viewArticle( $article, $format ); 
         }
     }
 

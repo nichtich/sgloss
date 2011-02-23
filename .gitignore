@@ -11,3 +11,4 @@ Makefile.old
 
 # local data
 data/example.sqlite
+config-local.php

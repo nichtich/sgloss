@@ -41,11 +41,11 @@ GNU Affero General Public License (the [AGPLv3] License).
     <xsl:param name="editable"/>
     <div class="sg-article">
       <h2 id="article-{g:title}">
-        <xsl:if test="not($editable)"><xsl:value-of select="g:title"/></xsl:if>
-        <xsl:if test="$editable">
-          <a href="?title={g:title}&amp;action=edit"><xsl:value-of select="g:title"/></a>
-        </xsl:if>
+        <xsl:value-of select="g:title"/>
       </h2>
+        <xsl:if test="$editable">
+          <a href="?title={g:title}&amp;action=edit">&#x2605;</a>
+        </xsl:if>
       <xsl:if test="g:alias">
         <span class="sg-alias">
           <xsl:value-of select="g:alias"/> <!-- TODO: multiple -->
