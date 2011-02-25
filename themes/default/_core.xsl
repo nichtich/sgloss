@@ -29,9 +29,9 @@ GNU Affero General Public License (the [AGPLv3] License).
     <html>
       <xsl:call-template name="htmlhead"/>
       <body>
-        <xsl:if test="sg:message|sg:error">
+        <xsl:if test="sg:message|sg:error|sg:warning">
           <div id="msg-container">
-             <xsl:apply-templates select="sg:message|sg:error"/>
+             <xsl:apply-templates select="sg:message|sg:error|sg:warning"/>
           </div>
         </xsl:if>
         <xsl:apply-templates select="." mode="header"/>
@@ -118,14 +118,8 @@ GNU Affero General Public License (the [AGPLv3] License).
   </xsl:template>
 
   <!-- messages -->
-  <xsl:template match="sg:message">
-    <div class="message">
-      <xsl:apply-templates/>
-    </div>
-  </xsl:template>
-
-  <xsl:template match="sg:error">
-    <div class="error">
+  <xsl:template match="sg:message|sg:error|sg:warning">
+    <div class="{local-name(.)}">
       <xsl:apply-templates/>
     </div>
   </xsl:template>

@@ -76,6 +76,9 @@ a:hover {
 .error { 
   color: #900; background-color: #faa; 
 }
+.warning { 
+  color: #A00; background-color: #fa4; 
+}
 
 .msg-close {
   cursor: pointer;
