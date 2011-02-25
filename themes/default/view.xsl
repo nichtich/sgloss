@@ -36,4 +36,9 @@ GNU Affero General Public License (the [AGPLv3] License).
     <dd><xsl:value-of select="."/></dd>
   </xsl:template>
 
+  <xsl:template match="sg:property[@name='syn']"/>
+  <xsl:template match="sg:property[@name='see']"/>
+  <xsl:template match="sg:property[@name='lit']"/>
+  <xsl:template match="sg:property[@name='author']"/>
+
 </xsl:stylesheet>

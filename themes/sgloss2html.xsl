@@ -52,57 +52,66 @@ GNU Affero General Public License (the [AGPLv3] License).
           </xsl:otherwise>
         </xsl:choose>
       </h2>
-        <xsl:if test="$editable">
-          <a href="?title={g:title}&amp;action=edit">&#x2605;</a>
-        </xsl:if>
-      <xsl:if test="g:alias">
+      <xsl:if test="$editable">
+        <a href="?title={g:title}&amp;action=edit">&#x2605;</a>
+      </xsl:if>
+      <xsl:if test="g:property[@name='syn']">
         <span class="sg-alias">
-          <xsl:value-of select="g:alias"/> <!-- TODO: multiple -->
+          <xsl:for-each select="g:property[@name='syn']">
+            <xsl:if test="position() &gt; 1">, </xsl:if>
+            <xsl:value-of select="."/>
+          </xsl:for-each>
         </span>
       </xsl:if>
       <xsl:apply-templates select="g:text"/>
-      <xsl:if test="g:see|g:reference|g:author">
-        <div style='padding-top:0.3em'> <!-- TODO: grouping -->
-          <xsl:if test="g:see">
-            <div class="sg-sees">
-              <xsl:for-each select="g:see">
-<!-- TODO -->
-  <!--      /*print $out "<div class='vernet'>&#x2197;&#xA0;";
-        $vernet =~ s/([^,]+)(,?\s*)/title2link($1)."$2"/ge;-->
-              </xsl:for-each>
-            </div>
-          </xsl:if>
-          <xsl:if test="g:reference">
-            <div class="sg-references">
-              <xsl:apply-templates select="g:reference"/>
-            </div>
-          </xsl:if>
-          <xsl:if test="g:author">
-            <div class="sg-authors">
-              <xsl:apply-templates select="g:author"/>
-            </div>
-          </xsl:if>
-        </div>
-      </xsl:if>
+      <xsl:apply-templates select="." mode="commonprop"/>
+
       <xsl:apply-templates select="." mode="properties"/>
-    </div> <xsl:comment>article</xsl:comment>
+    </div>
   </xsl:template>
 
   <xsl:template match="g:article" mode="properties"/>
 
-  <xsl:template match="g:text">
-    <div class="sg-text">
-        <xsl:apply-templates/>
-    </div>
+  <xsl:template match="g:article" mode="commonprop">
+      <xsl:variable name="see" select="g:property[@name='see']"/>
+      <xsl:variable name="lit" select="g:property[@name='lit']"/>
+      <xsl:variable name="aut" select="g:property[@name='author']"/>
+      <xsl:if test="$see|$lit|$aut">
+        <div style='padding-top:0.3em'>
+          <xsl:if test="$see">
+            <ul class="sg-sees csv">
+              <xsl:for-each select="$see">
+                <!-- TODO -->
+                <li><a class="sg-link"><xsl:value-of select="."/></a></li>
+              </xsl:for-each>
+            </ul>
+          </xsl:if>
+          <xsl:if test="$lit">
+            <div class="sg-references">
+              <xsl:for-each select="$lit">
+                <div class="sg-reference">
+                  <xsl:apply-templates/>
+                </div>
+              </xsl:for-each>
+            </div>
+          </xsl:if>
+          <xsl:if test="$aut">
+            <div class="sg-authors">
+              <xsl:apply-templates select="$aut"/>
+            </div>
+          </xsl:if>
+        </div>
+      </xsl:if>
   </xsl:template>
 
-  <xsl:template match="g:reference">
-    <div class="sg-reference">
+  <xsl:template match="g:text">
+    <div class="sg-text">
       <xsl:apply-templates/>
     </div>
   </xsl:template>
 
-  <xsl:template match="g:author">
+  <!-- TODO -->
+  <xsl:template match="g:property[@name='author']">
     <div class="sg-author">
       <xsl:apply-templates/>
     </div>
