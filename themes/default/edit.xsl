@@ -51,8 +51,12 @@ GNU Affero General Public License (the [AGPLv3] License).
       <input type="submit" name="edit" value="cancel"/>
       &#xA0;
       &#xA0;
-      <input type="submit" name="edit" value="delete"/>
     </form> 
+    <form method="get">
+      <input type="hidden" name="title" value="{sg:title}"/>
+      <input type="hidden" name="action" value="delete"/>
+      <input type="submit" name="edit" value="delete"/>
+    </form>
   </xsl:template>
 
 </xsl:stylesheet>

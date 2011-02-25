@@ -1,9 +1,17 @@
 <?php
 /**
  * SGloss - Simple Glossary Wiki
+ *
+ * Copyright (c) 2011 Jakob Voss. All Rights Reserved.
+ *
+ * The contents of this file may be used under the terms of the 
+ * GNU Affero General Public License (the [AGPLv3] License).
+ *
+ * Yes, this implementation is a hack that will be refactored.
  */
 
 # load libraries
+include 'src/SGModel.php';
 include 'src/SGWTheme.php';
 
 # load configuration
@@ -17,8 +25,9 @@ $wiki = new SGlossWiki( $sgconf );
 
 
 # get and check parameters
-$title  = trim(@$_REQUEST['title']);
-$title = preg_replace('/[<>`&\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
+$title = new SGTitle( isset($_REQUEST['title']) ? $_REQUEST['title'] : '' );
+#$title  = trim(@$_REQUEST['title']);
+# $title = preg_replace('/[<>`&\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
 
 $action = preg_replace('/[^a-z]/','',trim(@$_REQUEST['action']));
 
@@ -42,10 +51,15 @@ $wiki->debug = array(
 $perm = $wiki->permissions["all"];
 if ( !empty($action) ) {
     if ( empty($perm[ $action ])) {
-        $wiki->err[] = "Sorry, but you are not allowed to perform this action!";
+        $wiki->warn[] = "Sorry, but you are not allowed to perform this action!";
         $action = "view";
     }
 }
+
+# TODO: normalize title first
+
+if ( !empty($_REQUEST['msg']) ) 
+    $wiki->setMessage( $_REQUEST['msg'], $title );
 
 if ( $action == "list" ) {
     $wiki->listArticles();
@@ -53,13 +67,20 @@ if ( $action == "list" ) {
     $wiki->listLinks();
 } else if ( $action == "create" ) {
     $wiki->createArticle( $title, $data, $edit );
+} else if ( $action == "delete" ) {
+    $wiki->deleteArticle( $title );
 } else if ( $action == "edit" ) {
     if ( $title == "" ) 
         $wiki->createArticle( $title, $data, $edit );
     else
         $wiki->editArticle( $title, $data, $edit );
 } else if ( $action == "import" ) {
-    $wiki->import();# TODO
+    if (empty($_FILES['file'])) {
+        $file = NULL;
+    } else {
+        $file = $_FILES['file'];
+    }
+    $wiki->import( $file, @$_REQUEST['url'] );
 } else {
     $wiki->viewArticle( $title, $format );
 }
@@ -67,8 +88,9 @@ if ( $action == "list" ) {
 class SGlossWiki {
     var $title = "SGlossWiki";
     var $dbh;
-    var $err = array();
     var $msg = array();
+    var $warn = array();
+    var $err = array();
     var $home = "";
     var $theme;
     var $base;
@@ -115,11 +137,20 @@ class SGlossWiki {
         # TODO
     }
 
+    function redirectClient( $title, $msg ) {
+        $url = $this->base.'?';
+        if ( $title ) $url .= "&title=" . urlencode($title); // TODO: '0' is allowed title
+        if ( $msg ) $url .= "&msg=$msg";
+        header("Location: " . $url);
+        exit;
+    }
+
+    const CREATE_ARTICLE = 1;
+    const UPDATE_ARTICLE = 2;
+    const DELETE_ARTICLE = 3;
+
     function createArticle( $title, $data, $edit ) {
-        if ( $edit == "cancel" ) {
-            header("Location: " . $this->base);
-            exit;
-        }
+        if ( $edit == "cancel" ) $this->redirectClient();
         if ( $title != "" ) {
             $article = $this->_loadArticle( $title );
             if ( $article->exists() )
@@ -130,33 +161,32 @@ class SGlossWiki {
         if ( $edit == "save" && $title != "" && !$this->err ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
-                $this->msg[] = "Created article “${title}”";
-                $this->_viewArticle( $article, "html" );
+                $this->redirectClient( $title, self::CREATE_ARTICLE );
                 exit;
             }
         }
         $this->_createArticle( $article );
      }
 
-    function editArticle( $title, $data, $edit ) {
-        if ( $edit == "cancel" ) {
-            header("Location: " . $this->base . "?title=" . urlencode($title));
-            exit;
+    function deleteArticle( $title ) {
+        if ( $title != "" ) {
+            $this->_deleteArticle( $title );
+            if (!$this->err) {
+                $this->redirectClient( '', self::DELETE_ARTICLE ); # TODO.show title
+            }
         }
+
+        $this->viewArticle( $title );
+    }
+
+    function editArticle( $title, $data, $edit ) {
+        if ( $edit == "cancel" ) $this->redirectClient( $title );
         if ( $data === "" or $edit == "reset" ) {
             $article = $this->_loadArticle( $title );
             $this->_editArticle( $article );
             exit;
         } 
 
-        if ( $edit == "delete" ) {
-            $this->_deleteArticle( $title );
-            if (!$this->err) {
-                $this->msg[] = "Deleted article “${title}”";
-                $this->listArticles();
-                exit;
-            }
-        }
 
         $article = new SGlossArticle( $title );
         $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
@@ -167,13 +197,26 @@ class SGlossWiki {
         if ( $edit == "save" ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
-                $this->msg[] = "Saved article “${title}”";
-                $this->_viewArticle( $article, "html" );
+                $this->redirectClient( $title, self::UPDATE_ARTICLE );
                 exit;
             }
         }
 
         $this->_editArticle( $article );
+    }
+
+
+    function setMessage( $id, $title ) {
+        if (!$id) return;
+        if ( $id == self::UPDATE_ARTICLE ) {
+          $this->msg[] = "Saved article “${title}”";
+        } else if ( $id == self::CREATE_ARTICLE ) {
+          $this->msg[] = "Created article “${title}”";
+        } else if ( $id == self::DELETE_ARTICLE ) {
+          $this->msg[] = "Deleted article “${title}”"; # TODO: $title will be empty
+        } else {
+          # $this->msg[] = "Unknown msg $id";
+        }
     }
 
     function viewArticle( $title, $format="html" ) {
@@ -195,9 +238,50 @@ class SGlossWiki {
         }
     }
 
-    function import() {
+    function import( $file, $url) {
+        if (empty($_FILE)) $this->err[] = 'File upload not allowed';
+#$this->msg[] = print_r($_FILE,1);
+        if ( $file !== NULL  ) {
+            # let's ignore $url for now (needs security check).
+            if ( $file['error'] == UPLOAD_ERR_OK ) {
+                # original 'name' and 'type' may indicate XML but for now we just try
+                $size = $file['size'];
+                $filename = $file['tmp_name']; 
+                $this->_import_file( $filename );
+            } else {
+                # TODO: some more specific error messages if upload failed
+                $this->err[] = "please provide a file to upload!";
+            }
+        }
         $dom = $this->_createDOM( "import" );
         $this->_sendDOM($dom);
+    }
+    
+    # TO be called with a local filename
+    function _import_file( $file ) {
+        $size = filesize( $file );
+        if ( $size === FALSE || $file > 1024*1024 ) { # 1MB size limit (temporary)
+            $this->err[] = "file is $file too large ($size)!";
+            return;
+        }
+        $xml = new DomDocument( $file, LIBXML_NONET );
+        if (!$xml) {
+            $this->err[] = "could not parse file!";
+            return;
+        }
+        $root = $xml->documentElement;
+        $prefix = $root->lookupPrefix( SGlossWiki::$NS );
+        if ( $prefix ) {
+            $prefix = "$prefix:";
+        } else {
+            $prefix = "";
+            if (!$root->isDefaultNamespace( SGlossWiki::$NS )) {
+            }
+        }
+        if ( $root->tag == $prefix."sgloss" ) {
+           # .. iterate over all articles.
+        }
+        $this->msg[] = "successfully imported";
     }
 
     function listLinks() {
@@ -371,6 +455,11 @@ class SGlossWiki {
         }
         foreach ($this->msg as $msg ) {
             $e = $dom->createElementNS( SGlossWiki::$NS, 'message' );
+            $e->appendChild( $dom->createTextNode( $msg ) ); 
+            $root->appendChild( $e );
+        }
+        foreach ($this->warn as $msg ) {
+            $e = $dom->createElementNS( SGlossWiki::$NS, 'warning' );
             $e->appendChild( $dom->createTextNode( $msg ) ); 
             $root->appendChild( $e );
         }
