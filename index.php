@@ -657,12 +657,14 @@ class SGlossArticle {
 
         foreach ($lines as $line) {
            $text = trim($line);
+           if (!$lastempty) $text = " $text";
 
            if ($text == "") {
               $lastempty = TRUE;
               continue;
            }
 
+           # property
            if ( $lastempty ) {
                if ( preg_match('/^([a-zA-Z][a-zA-Z]+)\s*[=:]\s*(.*)$/',$line,$match) ) {
                   $key = $match[1];
