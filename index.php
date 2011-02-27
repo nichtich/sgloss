@@ -85,9 +85,90 @@ if ( $action == "list" ) {
     $wiki->viewArticle( $title, $format );
 }
 
+/**
+ * SGlossary stored in a database (PDO).
+ */
+class SGlossPDOStore {
+    var $dbh;
+    
+    function SGlossPDOStore( $config ) {
+        $this->dbh = new PDO( $config );
+        if ( !$this->dbh ) throw new Exception('could not create PDO object');
+        $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+        $this->dbh->exec( self::$sql_create );
+    }
+
+    # Maps title strings to SGTitle objects or strings (alias) or NULL.
+    private $titleCache = array( "" => NULL );
+
+    private function _provideTitleCache( $title ) {
+        if ( isset( $this->titleCache["$title"] ) ) return;
+
+        $sql = "SELECT title FROM articles WHERE title=?";
+        $sth = $this->dbh->prepare( $sql );
+        if ( $sth->execute(array("$title")) && $sth->fetchAll() ) {
+            # title exists as article: save SGTitle object
+            $this->titleCache["$title"] = $title;
+            return;
+        }
+
+        $sql = "SELECT article FROM properties WHERE value=? AND property='syn'";
+        $sth = $this->dbh->prepare( $sql );
+        if ( $sth->execute(array("$title")) && ($result = $sth->fetchAll(PDO::FETCH_COLUMN,0)) ) { 
+            # title exists as alias: save string
+            $t = $result[0];
+            $this->titleCache["$title"] = $t;
+            $this->titleCache[ $result[0] ] = new SGTitle( $t );
+            return;
+        }
+
+        # title does not exist: save NULL
+        $this->titleCache["$title"] = NULL;
+    }
+
+    function isAlias( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        return is_string($this->titleCache["$title"]);
+    }
+
+    function hasTitle( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        return ($this->titleCache["$title"] !== NULL);
+    }
+
+    # Get the preferred title (SGTitle or NULL)
+    function getTitle( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        if ( is_string( $this->titleCache["$title"] ) ) {
+            # title is an alias, so get preferred Title
+            $t = $this->titleCache["$title"];
+            return $this->titleCache[ $t ];
+        }
+        return $this->titleCache["$title"];
+    }
+
+
+    static $sql_create = <<<TEST
+CREATE TABLE IF NOT EXISTS articles (
+   title PRIMARY KEY ON CONFLICT REPLACE,
+   xml
+);
+CREATE TABLE IF NOT EXISTS properties (
+  'article' NOT NULL,
+  'property' NOT NULL,
+  'value'
+);
+TEST;
+
+}
+
 class SGlossWiki {
     var $title = "SGlossWiki";
     var $dbh;
+    var $store;
     var $msg = array();
     var $warn = array();
     var $err = array();
@@ -107,10 +188,8 @@ class SGlossWiki {
         if (isset($config['title'])) $this->title = $config['title'];
       
         try {
-            if (!($this->dbh = new PDO( @$config['pdo'] ))) 
-                throw new Exception('could not create PDO object');
-            $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-            $this->dbh->exec( self::$sql_create );
+            $this->store = new SGlossPDOStore( @$config['pdo'] );
+            $this->dbh = $this->store->dbh; # TODO: move dbh to store object
         } catch(Exception $e) {
             $this->err[] = "Failed to connect to database: " . $e->getMessage();
         }
@@ -137,10 +216,11 @@ class SGlossWiki {
         # TODO
     }
 
-    function redirectClient( $title, $msg ) {
+    function redirectClient( $title, $msg, $action = NULL ) {
         $url = $this->base.'?';
         if ( $title ) $url .= "&title=" . urlencode($title); // TODO: '0' is allowed title
-        if ( $msg ) $url .= "&msg=$msg";
+        if ( $msg ) $url .= "&msg=" . urlencode($msg);
+        if ( $action ) $url .= "&action=" . urlencode($action);
         header("Location: " . $url);
         exit;
     }
@@ -181,6 +261,9 @@ class SGlossWiki {
 
     function editArticle( $title, $data, $edit ) {
         if ( $edit == "cancel" ) $this->redirectClient( $title );
+        if ( ($redir = $this->getRedirect( $title ) ) !== NULL ) {
+             $this->redirectClient( $redir, NULL, "edit" );
+        }
         if ( $data === "" or $edit == "reset" ) {
             $article = $this->_loadArticle( $title );
             $this->_editArticle( $article );
@@ -189,8 +272,7 @@ class SGlossWiki {
 
 
         $article = new SGlossArticle( $title );
-        $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
-        $article->exists = ( $sth->execute(array($title)) && $sth->fetch() ) ? TRUE : FALSE;
+        $article->exists = $this->store->hasTitle( $title );
         
         $article->setData( $data, TRUE ); 
         
@@ -228,6 +310,8 @@ class SGlossWiki {
 
         if ( $article->exists() ) {
             $this->_viewArticle( $article, $format ); 
+        } else if ( ($redir = $this->getRedirect( $title )) !== NULL ) {
+            $this->redirectClient( $redir );
         } else if ( $this->permissions["all"]["edit"] ) {
             # TODO: send 404 if not exists and format != html
             header("Location: " . $this->base . "?action=edit&title=" . urlencode($title));
@@ -297,7 +381,7 @@ class SGlossWiki {
                    $a->xml = $row['xml'];
                    $a->exists = TRUE;
 
-                   $adom = $a->getDOM();
+                   $adom = $a->getDOM( array(), $this );
                    $alinks = $a->getLinks();
                    foreach ($alinks as $to) {
                       if (!array_key_exists($to,$links))
@@ -320,7 +404,7 @@ class SGlossWiki {
             } else {
                 $a = $articles[ $to ];
             }
-            $adom = $a->getDOM(); // MISSING?
+            $adom = $a->getDOM( array(), $this ); // MISSING?
             foreach ( array_keys( $back ) as $to ) {
                 $elem = $adom->createElement('backlink');
                 $attr = $adom->createAttribute('to');
@@ -334,7 +418,7 @@ class SGlossWiki {
         $dom = $this->_createDOM( "links" );
 
         foreach ( $articles as $a ) {
-            $adom = $a->getDOM();
+            $adom = $a->getDOM( array(), $this );
             $a2 = $dom->importNode( $adom->documentElement, TRUE );
             $dom->documentElement->appendChild( $a2  );
         }
@@ -357,7 +441,7 @@ class SGlossWiki {
 
         $dom = $this->_createDOM( "list" );
         foreach ( $articles as $a ) {
-            $adom = $a->getDOM();
+            $adom = $a->getDOM( array(), $this );
             $a2 = $dom->importNode( $adom->documentElement, TRUE );
             $dom->documentElement->appendChild( $a2  );
         }
@@ -378,26 +462,17 @@ class SGlossWiki {
         $xpath = new DOMXPath($dom);
         $xpath->registerNamespace('g',SGlossWiki::$NS);
 
-        $articles = array();
-        // TODO: fill with articles from DOM
-
-        $sth = $this->dbh->prepare('SELECT title FROM articles WHERE title=?');
         $alinks = $xpath->evaluate('g:article/g:text/g:link[@to]');
         if (!is_null($alinks)) {
             foreach ($alinks as $link) {
                 $to = $link->getAttribute('to');
-                if (!array_key_exists($to,$articles)) {
-                   $articles[ $to ] =
-                       ( $sth->execute(array($to)) && $sth->fetch() ) ? 1 : 0;
-                }
-                if ($articles[ $to ]) {
-                    $action = "?title=" .urlencode($to);
-                } else {
-                    $action = "?action=edit&title=" .urlencode($to);
+    		if ( !$this->store->hasTitle($to) ) {
+                    # TODO: add to result as skeleton articles instead of "missing" attribute
                     $attr = $dom->createAttribute('missing');
                     $attr->appendChild( $dom->createTextNode('1') );
                     $link->appendChild( $attr );
                 }
+                $action = "?title=" .urlencode($to);
                 $attr = $dom->createAttribute('action');
                 $attr->appendChild( $dom->createTextNode( $action ) );
                 $link->appendChild( $attr );
@@ -410,7 +485,7 @@ class SGlossWiki {
 
     function _sendArticle( $article, $action ) {
         $properties = $article->properties;
-        $adom = $article->getDOM( $properties );
+        $adom = $article->getDOM( $properties, $this );
         #$this->debug['a'] = $article;
         $dom = $this->_createDOM( $action );
         $a2 = $dom->importNode( $adom->documentElement, TRUE );
@@ -429,6 +504,7 @@ class SGlossWiki {
     function _createArticle( $article ) {
         $this->_sendArticle( $article, "create" );
     }
+
 
     function _createDOM( $action = "view" ) {
         $dom = new DomDocument('1.0','UTF-8');
@@ -472,8 +548,20 @@ class SGlossWiki {
         return $dom;
     }
 
+    function getRedirect( $title ) {
+        $sql = "SELECT article FROM properties WHERE value=? AND property='syn'";
+        $sth = $this->dbh->prepare( $sql );
+        $sth->execute( array($title) );
+        $result = $sth->fetchAll(PDO::FETCH_COLUMN,0);
+        return empty($result) ? NULL : new SGTitle( $result[0] );
+    }
+
     function _saveArticle( $article ) {
         if ( $this->err ) return;
+        if ( $this->getRedirect( $article->title ) !== NULL ) {
+            $this->err[] = "Article of this name already exists!";
+            return;
+        }
         try {
             # TODO: remove meta elements (backlink etc.)
             $xml = $article->dom->saveXML();
@@ -541,26 +629,16 @@ class SGlossWiki {
         $sth = $this->dbh->prepare("DELETE FROM properties WHERE article=?");
         $sth->execute(array($title));
         $sth = $this->dbh->prepare("INSERT INTO properties VALUES(?,?,?)");
+        # TODO: clean properties (some are not allowed)
         foreach ($properties as $p => $values) {
             foreach ( $values as $v ) {
+                if ( $p == 'syn' and $v == $title ) continue; # no syn loop!
                 $sth->execute(array( $title, $p, $v ));
             }
         }
     }
 
     static $NS = "http://jakobvoss.de/sgloss/";
-
-    static $sql_create = <<<TEST
-CREATE TABLE IF NOT EXISTS articles (
-   title PRIMARY KEY ON CONFLICT REPLACE,
-   xml
-);
-CREATE TABLE IF NOT EXISTS properties (
-  'article' NOT NULL,
-  'property' NOT NULL,
-  'value'
-);
-TEST;
 
 }
 
@@ -586,7 +664,7 @@ class SGlossArticle {
     }
 
     // TODO: return documentfragment as content
-    public function getDOM( $properties = array() ) {
+    public function getDOM( $properties = array(), $wiki ) {
         if (!$this->dom) {
             $this->dom = new DomDocument('1.0','UTF-8');
             if ( $this->xml ) {
@@ -604,7 +682,11 @@ class SGlossArticle {
                 } 
                 $dom->appendChild( $root );
             }
-            if (!$this->exists) {
+            $missing = !$this->exists;
+            if ( $missing && $wiki->getRedirect( $this->title ) ) {
+                $missing = FALSE;
+            }
+            if ( $missing ) {
                 $attr = $this->dom->createAttribute('missing');
                 $attr->appendChild( $this->dom->createTextNode('1') );
                 $this->dom->documentElement->appendChild( $attr );
@@ -625,7 +707,7 @@ class SGlossArticle {
     }
 
     function getLinks() {
-        $xpath = new DOMXPath( $this->getDOM() );
+        $xpath = new DOMXPath( $this->getDOM( array(), $this ) );
         $xpath->registerNamespace('g',SGlossWiki::$NS);
 
         $links = array();
@@ -646,7 +728,7 @@ class SGlossArticle {
 
         if ( $exists !== NULL ) $this->exists = $exists;        
 
-        $dom = $this->getDOM();
+        $dom = $this->getDOM( array(), $this );
         $root = $dom->documentElement;
         $textElem = $dom->createElementNS( SGlossWiki::$NS, 'text' );
 
@@ -657,7 +739,6 @@ class SGlossArticle {
 
         foreach ($lines as $line) {
            $text = trim($line);
-           if (!$lastempty) $text = " $text";
 
            if ($text == "") {
               $lastempty = TRUE;
@@ -673,6 +754,8 @@ class SGlossArticle {
                       $properties[$key][] = $v; else $properties[$key] = array($v);
                   continue;
                }
+           } else {
+               $text = " $text";
            }
 
            if ( preg_match('/^\[\[([^]]*)\]\]/',$text) ) $text = " $text";
