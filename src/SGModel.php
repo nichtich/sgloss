@@ -119,4 +119,124 @@ class SGTitle {
     }
 }
 
+
+/**
+ * Read-only access to an SGlossary.
+ */
+interface SGlossSource {
+    public function hasTitle( $title );
+    public function getTitle( $title );
+    public function isAlias( $title );
+
+    # TODO: getArticle, getProperties
+
+}
+
+/**
+ * Read-only access to an SGlossary that can be queried by properties.
+ */
+interface SGlossPropertySource {
+    public function findArticlesOfProperty( $key, $value ); # TODO (property should better be a class)
+}
+
+/**
+ * Read-write access to an SGlossary.
+ */
+interface SGlossStore extends SGlossSource {
+    # TODO
+}
+
+
+/**
+ * SGlossary stored in a database (PDO).
+ */
+class SGlossPDOStore implements SGlossStore {
+    var $dbh;
+    
+    function __construct( $config ) {
+        $this->dbh = new PDO( $config );
+        if ( !$this->dbh ) throw new Exception('could not create PDO object');
+        $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+        $this->dbh->exec( self::$sql_create );
+    }
+
+    # Maps title strings to SGTitle objects or strings (alias) or NULL.
+    private $titleCache = array( "" => NULL );
+
+    private function _provideTitleCache( $title ) {
+        if ( isset( $this->titleCache["$title"] ) ) return;
+
+        $sql = "SELECT title FROM articles WHERE title=?";
+        $sth = $this->dbh->prepare( $sql );
+        if ( $sth->execute(array("$title")) && $sth->fetchAll() ) {
+            # title exists as article: save SGTitle object
+            $this->titleCache["$title"] = $title;
+            return;
+        }
+
+        $sql = "SELECT article FROM properties WHERE value=? AND property='syn'";
+        $sth = $this->dbh->prepare( $sql );
+        if ( $sth->execute(array("$title")) && ($result = $sth->fetchAll(PDO::FETCH_COLUMN,0)) ) { 
+            # title exists as alias: save string
+            $t = $result[0];
+            $this->titleCache["$title"] = $t;
+            $this->titleCache[ $result[0] ] = new SGTitle( $t );
+            return;
+        }
+
+        # title does not exist: save NULL
+        $this->titleCache["$title"] = NULL;
+    }
+
+    function isAlias( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        return is_string($this->titleCache["$title"]);
+    }
+
+    function hasTitle( $title ) {
+        if ( is_array($title) ) {
+            foreach ( $title as $t ) {
+                if ( $this->_hasTitle($t) ) 
+                    return true;
+            }
+        } else {
+            return $this->_hasTitle($title);
+        }
+        return false;
+    }
+
+    private function _hasTitle( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        return ($this->titleCache["$title"] !== NULL);
+    }
+
+    # Get the preferred title (SGTitle or NULL)
+    function getTitle( $title ) {
+        if ( !is_object($title) ) $title = new SGTitle( $title );
+        $this->_provideTitleCache( $title );
+        if ( is_string( $this->titleCache["$title"] ) ) {
+            # title is an alias, so get preferred Title
+            $t = $this->titleCache["$title"];
+            return $this->titleCache[ $t ];
+        }
+        return $this->titleCache["$title"];
+    }
+
+    static $sql_create = <<<TEST
+CREATE TABLE IF NOT EXISTS articles (
+   title PRIMARY KEY ON CONFLICT REPLACE,
+   xml
+);
+CREATE TABLE IF NOT EXISTS properties (
+  'article' NOT NULL,
+  'property' NOT NULL,
+  'value'
+);
+TEST;
+
+}
+
+
 ?>

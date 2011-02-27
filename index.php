@@ -25,6 +25,14 @@ $wiki = new SGlossWiki( $sgconf );
 
 
 # get and check parameters
+if (isset($argv)) {
+    foreach ($argv as $a) {
+        if (preg_match('/^([a-z]+)=(.*)$/',$a,$match)) {
+            $_REQUEST[$match[1]] = $match[2];
+        }
+    }
+}
+
 $title = new SGTitle( isset($_REQUEST['title']) ? $_REQUEST['title'] : '' );
 #$title  = trim(@$_REQUEST['title']);
 # $title = preg_replace('/[<>`&\[\]]\|]/','',$title); # TODO: remove illegal charcters and normalize
@@ -85,86 +93,6 @@ if ( $action == "list" ) {
     $wiki->viewArticle( $title, $format );
 }
 
-/**
- * SGlossary stored in a database (PDO).
- */
-class SGlossPDOStore {
-    var $dbh;
-    
-    function SGlossPDOStore( $config ) {
-        $this->dbh = new PDO( $config );
-        if ( !$this->dbh ) throw new Exception('could not create PDO object');
-        $this->dbh->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-        $this->dbh->exec( self::$sql_create );
-    }
-
-    # Maps title strings to SGTitle objects or strings (alias) or NULL.
-    private $titleCache = array( "" => NULL );
-
-    private function _provideTitleCache( $title ) {
-        if ( isset( $this->titleCache["$title"] ) ) return;
-
-        $sql = "SELECT title FROM articles WHERE title=?";
-        $sth = $this->dbh->prepare( $sql );
-        if ( $sth->execute(array("$title")) && $sth->fetchAll() ) {
-            # title exists as article: save SGTitle object
-            $this->titleCache["$title"] = $title;
-            return;
-        }
-
-        $sql = "SELECT article FROM properties WHERE value=? AND property='syn'";
-        $sth = $this->dbh->prepare( $sql );
-        if ( $sth->execute(array("$title")) && ($result = $sth->fetchAll(PDO::FETCH_COLUMN,0)) ) { 
-            # title exists as alias: save string
-            $t = $result[0];
-            $this->titleCache["$title"] = $t;
-            $this->titleCache[ $result[0] ] = new SGTitle( $t );
-            return;
-        }
-
-        # title does not exist: save NULL
-        $this->titleCache["$title"] = NULL;
-    }
-
-    function isAlias( $title ) {
-        if ( !is_object($title) ) $title = new SGTitle( $title );
-        $this->_provideTitleCache( $title );
-        return is_string($this->titleCache["$title"]);
-    }
-
-    function hasTitle( $title ) {
-        if ( !is_object($title) ) $title = new SGTitle( $title );
-        $this->_provideTitleCache( $title );
-        return ($this->titleCache["$title"] !== NULL);
-    }
-
-    # Get the preferred title (SGTitle or NULL)
-    function getTitle( $title ) {
-        if ( !is_object($title) ) $title = new SGTitle( $title );
-        $this->_provideTitleCache( $title );
-        if ( is_string( $this->titleCache["$title"] ) ) {
-            # title is an alias, so get preferred Title
-            $t = $this->titleCache["$title"];
-            return $this->titleCache[ $t ];
-        }
-        return $this->titleCache["$title"];
-    }
-
-
-    static $sql_create = <<<TEST
-CREATE TABLE IF NOT EXISTS articles (
-   title PRIMARY KEY ON CONFLICT REPLACE,
-   xml
-);
-CREATE TABLE IF NOT EXISTS properties (
-  'article' NOT NULL,
-  'property' NOT NULL,
-  'value'
-);
-TEST;
-
-}
-
 class SGlossWiki {
     var $title = "SGlossWiki";
     var $dbh;
@@ -212,10 +140,6 @@ class SGlossWiki {
         }
     }
  
-    function listMissingArticles() {
-        # TODO
-    }
-
     function redirectClient( $title, $msg, $action = NULL ) {
         $url = $this->base.'?';
         if ( $title ) $url .= "&title=" . urlencode($title); // TODO: '0' is allowed title
@@ -231,10 +155,12 @@ class SGlossWiki {
 
     function createArticle( $title, $data, $edit ) {
         if ( $edit == "cancel" ) $this->redirectClient();
-        if ( $title != "" ) {
-            $article = $this->_loadArticle( $title );
+        if ( $this->store->hasTitle($title) ) {
+            $t = $this->store->getTitle($title);
+            $article = $this->_loadArticle( $t );
             if ( $article->exists() )
                 $this->err[] = "Article “${title}” already exists";
+            $title = $t;
         } 
         $article = new SGlossArticle( $title );
         $article->setData( $data, NULL, $this ); 
@@ -269,7 +195,6 @@ class SGlossWiki {
             $this->_editArticle( $article );
             exit;
         } 
-
 
         $article = new SGlossArticle( $title );
         $article->exists = $this->store->hasTitle( $title );
@@ -549,11 +474,8 @@ class SGlossWiki {
     }
 
     function getRedirect( $title ) {
-        $sql = "SELECT article FROM properties WHERE value=? AND property='syn'";
-        $sth = $this->dbh->prepare( $sql );
-        $sth->execute( array($title) );
-        $result = $sth->fetchAll(PDO::FETCH_COLUMN,0);
-        return empty($result) ? NULL : new SGTitle( $result[0] );
+        if ( !$this->store->isAlias($title) ) return NULL;
+        return $this->store->getTitle($title);
     }
 
     function _saveArticle( $article ) {
