@@ -237,7 +237,7 @@ class SGlossWiki {
                 $this->err[] = "Article “${title}” already exists";
         } 
         $article = new SGlossArticle( $title );
-        $article->setData( $data ); 
+        $article->setData( $data, NULL, $this ); 
         if ( $edit == "save" && $title != "" && !$this->err ) {
             $this->_saveArticle( $article );
             if (!$this->err) {
@@ -274,7 +274,7 @@ class SGlossWiki {
         $article = new SGlossArticle( $title );
         $article->exists = $this->store->hasTitle( $title );
         
-        $article->setData( $data, TRUE ); 
+        $article->setData( $data, TRUE, $this ); 
         
         if ( $edit == "save" ) {
             $this->_saveArticle( $article );
@@ -382,7 +382,7 @@ class SGlossWiki {
                    $a->exists = TRUE;
 
                    $adom = $a->getDOM( array(), $this );
-                   $alinks = $a->getLinks();
+                   $alinks = $a->getLinks( $this );
                    foreach ($alinks as $to) {
                       if (!array_key_exists($to,$links))
                          $links[$to] = array();
@@ -683,7 +683,7 @@ class SGlossArticle {
                 $dom->appendChild( $root );
             }
             $missing = !$this->exists;
-            if ( $missing && $wiki->getRedirect( $this->title ) ) {
+            if ( $missing && $wiki->store->hasTitle( $this->title ) ) {
                 $missing = FALSE;
             }
             if ( $missing ) {
@@ -706,8 +706,8 @@ class SGlossArticle {
         return $this->dom;
     }
 
-    function getLinks() {
-        $xpath = new DOMXPath( $this->getDOM( array(), $this ) );
+    function getLinks( $wiki ) {
+        $xpath = new DOMXPath( $this->getDOM( array(), $wiki ) );
         $xpath->registerNamespace('g',SGlossWiki::$NS);
 
         $links = array();
@@ -723,12 +723,12 @@ class SGlossArticle {
         return array_keys($links);
     }
 
-    function setData( $data, $exists = NULL ) {
+    function setData( $data, $exists = NULL, $wiki ) {
         $properties = array();
 
         if ( $exists !== NULL ) $this->exists = $exists;        
 
-        $dom = $this->getDOM( array(), $this );
+        $dom = $this->getDOM( array(), $wiki );
         $root = $dom->documentElement;
         $textElem = $dom->createElementNS( SGlossWiki::$NS, 'text' );
 
