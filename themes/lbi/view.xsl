@@ -22,7 +22,7 @@ GNU Affero General Public License (the [AGPLv3] License).
       </head>
       <body>
          <div>
-           <xsl:apply-templates select="//sg:article">
+           <xsl:apply-templates select="//sg:article[sg:text]">
              <xsl:sort select="sg:title"/>
            </xsl:apply-templates>
         </div>

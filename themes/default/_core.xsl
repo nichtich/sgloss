@@ -20,8 +20,8 @@ GNU Affero General Public License (the [AGPLv3] License).
   <xsl:variable name="VERSION" select="normalize-space(/*/@version)"/>
 
     <xsl:variable name="aonetitle">
-      <xsl:if test="count(//sg:article)=1">
-        <xsl:value-of select="//sg:article/sg:title"/>
+      <xsl:if test="count(//sg:article[sg:text])=1">
+        <xsl:value-of select="//sg:article[sg:text]/sg:title"/>
       </xsl:if>
     </xsl:variable>
 
@@ -42,7 +42,7 @@ GNU Affero General Public License (the [AGPLv3] License).
           <xsl:apply-templates select="." mode="pre-articles"/>
            <xsl:if test="sg:article">
              <div class="sg-articles">
-              <xsl:apply-templates select="sg:article">
+              <xsl:apply-templates select="sg:article[sg:text]">
                 <xsl:sort select="sg:title"/>
                 <xsl:with-param name="editable" select="true()"/>
               </xsl:apply-templates>

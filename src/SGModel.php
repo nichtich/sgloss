@@ -121,6 +121,38 @@ class SGTitle {
 
 
 /**
+ *
+ */
+class SGArticle {
+    var $title;          // SGTitle
+    private $content;    // array of paragraphs
+    private $properties; // SGProperties
+
+    # returns a list of titles linked in the article's content
+    public function getLinks() {
+        # ...TODO...
+    }
+
+    # set content (and properties?) by parsing wikitext
+    public function setFromWikitext( $str ) {
+        # ...TODO...
+    }
+
+    # get the content as DOMFragment added to a given DOMDocument
+    public function getContentDOMFragment( $doc ) {
+        $dom = $doc->createDocumentFragment();
+
+        # ...TODO...append content
+
+        return $dom;
+    }
+}
+
+class SGProperties {
+}
+
+
+/**
  * Read-only access to an SGlossary.
  */
 interface SGlossSource {
@@ -143,6 +175,8 @@ interface SGlossPropertySource {
  * Read-write access to an SGlossary.
  */
 interface SGlossStore extends SGlossSource {
+    public function deleteArticle( $title );
+
     # TODO
 }
 
@@ -150,8 +184,8 @@ interface SGlossStore extends SGlossSource {
 /**
  * SGlossary stored in a database (PDO).
  */
-class SGlossPDOStore implements SGlossStore {
-    var $dbh;
+class SGlossPDOStore implements SGlossStore { # TODO: implements SGlossPropertySource
+    var $dbh; # TODO: private
     
     function __construct( $config ) {
         $this->dbh = new PDO( $config );
@@ -213,7 +247,7 @@ class SGlossPDOStore implements SGlossStore {
     }
 
     # Get the preferred title (SGTitle or NULL)
-    function getTitle( $title ) {
+    public function getTitle( $title ) {
         if ( !is_object($title) ) $title = new SGTitle( $title );
         $this->_provideTitleCache( $title );
         if ( is_string( $this->titleCache["$title"] ) ) {
@@ -222,6 +256,19 @@ class SGlossPDOStore implements SGlossStore {
             return $this->titleCache[ $t ];
         }
         return $this->titleCache["$title"];
+    }
+
+    public function deleteArticle( $title ) {
+        $t = $this->getTitle( $title );
+        if ($t === NULL) throw new Exception("Article $t not found");
+
+        $this->dbh->beginTransaction();
+        $sql = "DELETE FROM articles WHERE title=?";
+        $sth = $this->dbh->prepare( $sql );
+        $sth->execute(array( "$t" ));
+        $sth = $this->dbh->prepare("DELETE FROM properties WHERE `article` = ?");
+        $sth->execute(array( "$t" ));
+        $this->dbh->commit();
     }
 
     static $sql_create = <<<TEST

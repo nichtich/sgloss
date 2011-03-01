@@ -15,6 +15,8 @@ GNU Affero General Public License (the [AGPLv3] License).
 
   <xsl:output method="html" encoding="UTF-8" indent="yes"/>
 
+  <xsl:variable name="articles_with_text" select="/g:sgloss/g:article[g:text]"/>
+
   <xsl:template match="/g:sgloss">
     <html>
       <head>
@@ -30,7 +32,7 @@ GNU Affero General Public License (the [AGPLv3] License).
             <xsl:value-of select="g:title"/>
           </h1>
           <div class="sg-articles">
-            <xsl:apply-templates select="g:article"/>
+            <xsl:apply-templates select="g:article[g:text]"/>
           </div>
         </div>
       </body>
@@ -136,12 +138,12 @@ GNU Affero General Public License (the [AGPLv3] License).
         <xsl:variable name="to" select="@to"/>
         <xsl:variable name="class">
           <xsl:text>sg-link</xsl:text>
-          <xsl:if test="@missing"> missing</xsl:if>
+          <xsl:if test="not(//g:article[g:title=$to])"> missing</xsl:if>
         </xsl:variable>
         <a class="{$class}">
           <xsl:attribute name="href">
              <xsl:choose>
-               <xsl:when test="//g:article[g:title=$to]">#<xsl:value-of select="@to"/></xsl:when>
+               <xsl:when test="$articles_with_text[g:title=$to]">#<xsl:value-of select="@to"/></xsl:when>
                <xsl:when test="@action"><xsl:value-of select="@action"/></xsl:when>
                <!--xsl:when test="not(@action)"><xsl:value-of select="@to"/></xsl:when-->
                <xsl:otherwise>#<xsl:value-of select="@to"/></xsl:otherwise>

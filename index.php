@@ -176,7 +176,11 @@ class SGlossWiki {
 
     function deleteArticle( $title ) {
         if ( $title != "" ) {
-            $this->_deleteArticle( $title );
+            try {
+                $this->store->deleteArticle( $title );
+            } catch ( Exception $e ) {
+                $this->err = "Failed to delete article: " . $e->getMessage();
+            }
             if (!$this->err) {
                 $this->redirectClient( '', self::DELETE_ARTICLE ); # TODO.show title
             }
@@ -239,6 +243,7 @@ class SGlossWiki {
             $this->redirectClient( $redir );
         } else if ( $this->permissions["all"]["edit"] ) {
             # TODO: send 404 if not exists and format != html
+            # TODO: also send $this->err to show at the next screen
             header("Location: " . $this->base . "?action=edit&title=" . urlencode($title));
             exit;
         } else {
@@ -387,15 +392,14 @@ class SGlossWiki {
         $xpath = new DOMXPath($dom);
         $xpath->registerNamespace('g',SGlossWiki::$NS);
 
+        $linked = array();
+
         $alinks = $xpath->evaluate('g:article/g:text/g:link[@to]');
         if (!is_null($alinks)) {
             foreach ($alinks as $link) {
-                $to = $link->getAttribute('to');
-    		if ( !$this->store->hasTitle($to) ) {
-                    # TODO: add to result as skeleton articles instead of "missing" attribute
-                    $attr = $dom->createAttribute('missing');
-                    $attr->appendChild( $dom->createTextNode('1') );
-                    $link->appendChild( $attr );
+                $to = $link->getAttribute('to'); # TODO: what if to is not a valid title?
+    		if ( $this->store->hasTitle($to) ) {
+                    $linked[$to] = 1; 
                 }
                 $action = "?title=" .urlencode($to);
                 $attr = $dom->createAttribute('action');
@@ -406,6 +410,19 @@ class SGlossWiki {
         $attr = $dom->createAttribute('version');
         $attr->appendChild( $dom->createTextNode($this->version) );
         $dom->documentElement->appendChild( $attr );
+
+        $titles = $xpath->query('g:article/g:title');
+        foreach ($titles as $title) {
+            $title = $title->textContent;
+            unset($linked[$title]);
+        }
+        foreach ($linked as $title => $dummy) {
+            $aElem = $dom->createElementNS( SGlossWiki::$NS, 'article' );
+            $tElem = $dom->createElementNS( SGlossWiki::$NS, 'title' );
+            $tElem->appendChild( $dom->createTextNode( $title ) ); 
+            $aElem->appendChild( $tElem );
+            $dom->documentElement->appendChild( $aElem );
+        }
     }
 
     function _sendArticle( $article, $action ) {
@@ -496,18 +513,6 @@ class SGlossWiki {
             $this->_replaceProperties( $article->title, $article->properties );
         } catch ( Exception $e ) {
             $this->err = "Failed to save article: " . $e->getMessage();
-        }
-    }
-
-    function _deleteArticle( $title ) {
-        if ( $this->err ) return;
-        try {
-            $sth = $this->dbh->prepare('DELETE FROM articles WHERE title = ?');
-            $sth->execute(array( $title ));
-            $sth = $this->dbh->prepare("DELETE FROM properties WHERE `article` = ?");
-            $sth->execute(array( $title ));
-        } catch ( Exception $e ) {
-            $this->err = "Failed to delete article: " . $e->getMessage();
         }
     }
 
@@ -604,6 +609,7 @@ class SGlossArticle {
                 } 
                 $dom->appendChild( $root );
             }
+/*
             $missing = !$this->exists;
             if ( $missing && $wiki->store->hasTitle( $this->title ) ) {
                 $missing = FALSE;
@@ -613,6 +619,7 @@ class SGlossArticle {
                 $attr->appendChild( $this->dom->createTextNode('1') );
                 $this->dom->documentElement->appendChild( $attr );
             }
+*/
         }
         foreach ( $properties as $p => $values ) {
             foreach ( $values as $v ) {
