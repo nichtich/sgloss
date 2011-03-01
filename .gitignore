@@ -2,10 +2,6 @@
 *~
 *.bak
 
-# Makefile etc.
-Makefile
-Makefile.old
-
 # distributions
 *.gz
 

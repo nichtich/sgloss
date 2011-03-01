@@ -31,3 +31,8 @@ GETTING STARTED
 
    http://example.org/data/
 
+src/normal contains Unicode normalization routines from MediaWiki. You can get the
+latest version via:
+
+$ svn checkout http://svn.wikimedia.org/svnroot/mediawiki/trunk/phase3/includes/normal
+
