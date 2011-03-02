@@ -5,6 +5,9 @@
 # distributions
 *.gz
 
+# Subversion 
+.svn
+
 # local data
 data/example.sqlite
 config-local.php

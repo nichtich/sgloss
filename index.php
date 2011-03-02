@@ -11,8 +11,8 @@
  */
 
 # load libraries
-include 'src/SGModel.php';
-include 'src/SGWTheme.php';
+include 'include/SGModel.php';
+include 'include/SGWTheme.php';
 
 # load configuration
 include 'config-default.php';
@@ -609,17 +609,6 @@ class SGlossArticle {
                 } 
                 $dom->appendChild( $root );
             }
-/*
-            $missing = !$this->exists;
-            if ( $missing && $wiki->store->hasTitle( $this->title ) ) {
-                $missing = FALSE;
-            }
-            if ( $missing ) {
-                $attr = $this->dom->createAttribute('missing');
-                $attr->appendChild( $this->dom->createTextNode('1') );
-                $this->dom->documentElement->appendChild( $attr );
-            }
-*/
         }
         foreach ( $properties as $p => $values ) {
             foreach ( $values as $v ) {
