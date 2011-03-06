@@ -4,13 +4,13 @@
  *
  * Copyright (c) 2011 Jakob Voss. All Rights Reserved.
  *
- * This file reuses code from MediaWiki's class 'Title'.
- *
  * The contents of this file may be used under the terms of the 
  * GNU Affero General Public License (the [AGPLv3] License).
  *
  * @file
  */
+
+require_once 'SGString.php';
 
 /**
  * Represents the title of an SGloss article.
@@ -19,6 +19,16 @@
  * diallowed substrings. Invalid parts of a title are removed on creation. 
  * Instances of this class are only created once but never modified. You can 
  * use them just link strings but never assign values to them.
+ *
+ * In detail a Title must not contain any of the characters <tt>[]{}|#</tt>,
+ * non-printable characters 0-31, character 127, whitespace at the start or
+ * end, multiple whitespaces next to each other, bidi override characters,
+ * percent-encoded or XML character references
+ * and it must not be more then 255 bytes in Unicode normalization form C 
+ * UTF-8 encoding.
+ *
+ * This class reuses code from MediaWiki's 'Title' class but our implementation
+ * is independent from a particular database scheme and there is no caching.
  */
 class SGTitle {
 
@@ -46,15 +56,9 @@ class SGTitle {
      */
     private static function cleanTitle( $title ) {
 
-        # NOTE: MediaWiki used a title cache that is not implemented here.
+        # Normalize to Unicode Canonical Form C
+	$title = SGString::decodeCharReferencesAndNormalize( $title );
  
-        # TODO: Convert things like &eacute; &#257; or &#x3017; into normalized (bug 14952) text
-	# $filteredText = Sanitizer::decodeCharReferencesAndNormalize( $text );
-
-        # TODO: XML allows  #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
-        # $pattern = '/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u';
-        # $title = preg_replace( $pattern, '', $title );
-  
         # initialization
         static $rxTc = false;
         if( !$rxTc ) {
@@ -80,6 +84,8 @@ class SGTitle {
 	# override chars get included in list displays.
 	$title = preg_replace( '/\xE2\x80[\x8E\x8F\xAA-\xAE]/S', '', $title );
 
+        # FIXME: removal of characters above may lead to disallowed character sequences!
+
 	# Clean up whitespace
         # Note: use of the /u option on preg_replace here will cause
 	# input with invalid UTF-8 sequences to be nullified out in PHP 5.2.x,
@@ -89,13 +95,14 @@ class SGTitle {
 
         if ( $title == '' ) return '';
 
-        # TODO: Is this still needed in PHP 5.2.x ?
-        # TODO: normalize to Unicode Canonical Form C
+        # TODO: XML allows only [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+        # we should check $pattern = '/[^\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u';
+        # whether this restriction is ensured.
+ 
         # Contained illegal UTF-8 sequences or forbidden Unicode chars.
-        # if( false !== strpos( $title, UTF8_REPLACEMENT ) ) {
-        #     return '';
-        # }
-
+        if( false !== strpos( $title, UTF8_REPLACEMENT ) ) {
+            return '';
+        }
 
         # Pages with "/./" or "/../" appearing in the URLs will often be un-
         # reachable due to the way web browsers deal with 'relative' URLs.
@@ -117,38 +124,6 @@ class SGTitle {
 
         return $title;
     }
-}
-
-
-/**
- *
- */
-class SGArticle {
-    var $title;          // SGTitle
-    private $content;    // array of paragraphs
-    private $properties; // SGProperties
-
-    # returns a list of titles linked in the article's content
-    public function getLinks() {
-        # ...TODO...
-    }
-
-    # set content (and properties?) by parsing wikitext
-    public function setFromWikitext( $str ) {
-        # ...TODO...
-    }
-
-    # get the content as DOMFragment added to a given DOMDocument
-    public function getContentDOMFragment( $doc ) {
-        $dom = $doc->createDocumentFragment();
-
-        # ...TODO...append content
-
-        return $dom;
-    }
-}
-
-class SGProperties {
 }
 
 
